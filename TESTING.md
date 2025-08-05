@@ -28,7 +28,7 @@ cp .env.example .env
 IRYS_PRIVATE_KEY=your-private-key-here
 
 # 선택적 설정
-IRYS_GATEWAY_URL=https://node2.irys.xyz
+IRYS_GATEWAY_URL=https://uploader.irys.xyz
 LOG_LEVEL=info
 MAX_FILE_SIZE=104857600
 ALLOWED_FILE_TYPES=text/plain,image/png,image/jpeg,application/pdf

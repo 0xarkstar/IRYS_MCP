@@ -271,7 +271,7 @@ export class IrysAdvancedMCPServer {
         // 시뮬레이션: 멀티 토큰 업로드
         return {
           transactionId: `multi-token-tx-${Date.now()}`,
-          url: `https://node2.irys.xyz/multi-token-tx-${Date.now()}`,
+          url: `https://uploader.irys.xyz/multi-token-tx-${Date.now()}`,
           size: 1024,
           contentType: request.contentType || 'application/octet-stream',
           tags: request.tags,

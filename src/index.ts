@@ -1,58 +1,40 @@
 #!/usr/bin/env node
 
 import { IrysMCPServer } from './server/IrysMCPServer';
-import { config } from 'dotenv';
+import { IrysAdvancedMCPServer } from './server/IrysAdvancedMCPServer';
+import { NetworkType } from './services/IrysService';
+import dotenv from 'dotenv';
 
-// Load environment variables
-config();
+// 환경 변수 로드
+dotenv.config();
 
-async function main() {
-  try {
-    const privateKey = process.env.IRYS_PRIVATE_KEY;
-    const gatewayUrl = process.env.IRYS_GATEWAY_URL || 'https://node2.irys.xyz';
+// 환경 변수에서 설정 가져오기
+const privateKey = process.env.IRYS_PRIVATE_KEY || 'test-private-key';
+const networkType = (process.env.IRYS_NETWORK as NetworkType) || 'mainnet';
+const gatewayUrl = process.env.IRYS_GATEWAY_URL;
 
-    if (!privateKey) {
-      console.error('❌ IRYS_PRIVATE_KEY environment variable is not set.');
-      console.log('📝 Please add the following to your .env file:');
-      console.log('IRYS_PRIVATE_KEY=your-private-key-here');
-      console.log('IRYS_GATEWAY_URL=https://node2.irys.xyz (optional)');
-      process.exit(1);
-    }
-
-    const server = new IrysMCPServer(privateKey, gatewayUrl);
-    await server.start();
-
-    console.log('🎉 Irys MCP server started successfully!');
-    console.log('\n--- Available Tools List ---');
-    server.getRegisteredTools().forEach(tool => {
-      console.log(`- ${tool.name}: ${tool.description}`);
-    });
-    console.log('---------------------------\n');
-
-    // Keep the process alive
-    process.on('SIGINT', async () => {
-      console.log('\nSIGINT signal received, shutting down server...');
-      await server.stop();
-      process.exit(0);
-    });
-
-    process.on('SIGTERM', async () => {
-      console.log('\nSIGTERM signal received, shutting down server...');
-      await server.stop();
-      process.exit(0);
-    });
-
-  } catch (error) {
-    console.error('❌ Error occurred while starting server:', error);
-    process.exit(1);
+// 네트워크 타입에 따른 기본 URL 설정
+const getDefaultUrl = (network: NetworkType): string => {
+  switch (network) {
+    case 'testnet':
+      return 'https://testnet-rpc.irys.xyz/v1';
+    case 'mainnet':
+    default:
+      return 'https://uploader.irys.xyz';
   }
-}
+};
 
-if (require.main === module) {
-  main().catch((error) => {
-    console.error('Unhandled error in main:', error);
-    process.exit(1);
-  });
-}
+const finalGatewayUrl = gatewayUrl || getDefaultUrl(networkType);
 
-export { IrysMCPServer }; 
+console.log('🚀 Irys MCP 서버 시작 중...');
+console.log('IRYS_PRIVATE_KEY=' + (privateKey ? '설정됨' : '설정되지 않음'));
+console.log(`IRYS_NETWORK=${networkType}`);
+console.log(`IRYS_GATEWAY_URL=${finalGatewayUrl} (Irys L1 ${networkType === 'testnet' ? '테스트넷' : '메인넷'})`);
+
+// MCP 서버 인스턴스 생성
+const server = new IrysMCPServer(privateKey, finalGatewayUrl);
+const advancedServer = new IrysAdvancedMCPServer(privateKey, 'ethereum', finalGatewayUrl);
+
+// 서버 시작
+server.start();
+advancedServer.start();

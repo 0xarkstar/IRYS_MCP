@@ -392,6 +392,7 @@ export interface CategoryResponse {
   action: string;
   success: boolean;
   message?: string;
+  transactionId?: string;
 }
 
 // 태그 응답

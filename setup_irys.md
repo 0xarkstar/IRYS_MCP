@@ -1,4 +1,4 @@
-# 실제 Irys 연결 설정 가이드
+# Irys L1 연결 설정 가이드
 
 ## 1. Node.js 환경 설정
 
@@ -20,158 +20,178 @@ sudo apt-get install -y nodejs
 npm install @irys/sdk
 ```
 
-## 2. Irys 지갑 설정
+## 2. Irys L1 지갑 설정
 
 ### 2.1 개인키 생성/가져오기
 ```bash
-# Arweave 지갑 생성 (Irys는 Arweave 기반)
-npx arweave-keygen wallet.json
+# Irys L1은 독립적인 L1 블록체인입니다
+# 개인키는 32바이트 hex 문자열 형식이어야 합니다
+# 예시: 64자리 hex 문자열
 ```
 
 ### 2.2 환경변수 설정
 ```bash
 # .env 파일 생성
-IRYS_PRIVATE_KEY="your-private-key-here"
-IRYS_GATEWAY_URL="https://node2.irys.xyz"
+IRYS_PRIVATE_KEY="your-64-character-hex-private-key"
+IRYS_GATEWAY_URL="https://uploader.irys.xyz"
 ```
 
-## 3. Python 코드 수정
+## 3. TypeScript 코드 예시
 
-### 3.1 실제 Irys 브리지 구현
-```python
-import os
-import json
-import subprocess
-from pathlib import Path
+### 3.1 Irys L1 연결 예시
+```typescript
+import Irys from '@irys/sdk';
 
-class RealIrysBridge:
-    def __init__(self):
-        self.private_key = os.getenv('IRYS_PRIVATE_KEY')
-        self.gateway_url = os.getenv('IRYS_GATEWAY_URL', 'https://node2.irys.xyz')
+class IrysL1Service {
+  private irys: Irys;
+  
+  constructor(privateKey: string) {
+    // 32바이트 hex 문자열을 Uint8Array로 변환
+    const key = new Uint8Array(Buffer.from(privateKey, 'hex'));
     
-    async def upload_file(self, file_path: str, tags: dict = None):
-        script = f"""
-        const Irys = require('@irys/sdk');
-        
-        async function upload() {{
-            const irys = new Irys({{
-                url: '{self.gateway_url}',
-                token: 'arweave',
-                key: '{self.private_key}'
-            }});
-            
-            const receipt = await irys.uploadFile('{file_path}', {{
-                tags: {json.dumps(tags or {})}
-            }});
-            
-            console.log(JSON.stringify({{
-                success: true,
-                transactionId: receipt.id,
-                url: receipt.url,
-                size: receipt.size
-            }}));
-        }}
-        
-        upload().catch(error => {{
-            console.log(JSON.stringify({{
-                success: false,
-                error: error.message
-            }}));
-        }});
-        """
-        
-        result = subprocess.run(
-            ['node', '-e', script],
-            capture_output=True,
-            text=True,
-            timeout=120
-        )
-        
-        if result.returncode != 0:
-            raise Exception(f"Node.js 오류: {result.stderr}")
-        
-        response = json.loads(result.stdout.strip())
-        if not response.get('success'):
-            raise Exception(f"Irys 업로드 실패: {response.get('error')}")
-        
-        return response
+          this.irys = new Irys({
+        url: 'https://uploader.irys.xyz',
+        token: 'ethereum', // Irys L1에서 지원하는 토큰
+        key: key,
+      });
+  }
+  
+  async uploadFile(filePath: string, tags: any[] = []) {
+    const receipt = await this.irys.uploadFile(filePath, { tags });
+    return {
+      success: true,
+      transactionId: receipt.id,
+      url: receipt.url,
+      size: receipt.size
+    };
+  }
+  
+  async getBalance() {
+    return await this.irys.getLoadedBalance();
+  }
+}
 ```
 
 ### 3.2 MCP 서버에 통합
-```python
-# src/irys_mcp/server.py 수정
-from .real_irys_bridge import RealIrysBridge
+```typescript
+// src/server/IrysMCPServer.ts 수정
+import { IrysService } from '../services/IrysService';
 
-class IrysMCPServer(FastMCP):
-    def __init__(self):
-        super().__init__()
-        self.irys_bridge = RealIrysBridge()
-    
-    async def upload_file(self, request: IrysUploadRequest) -> IrysUploadResponse:
-        try:
-            result = await self.irys_bridge.upload_file(
-                file_path=request.file_path,
-                tags=request.tags
-            )
-            
-            return IrysUploadResponse(
-                transaction_id=result['transactionId'],
-                url=result['url'],
-                size=result['size']
-            )
-        except Exception as e:
-            logger.error(f"실제 Irys 업로드 실패: {e}")
-            raise
+export class IrysMCPServer extends FastMCP {
+  private irysService: IrysService;
+  
+  constructor() {
+    super();
+    const privateKey = process.env.IRYS_PRIVATE_KEY || '';
+    this.irysService = new IrysService(privateKey);
+  }
+  
+  async uploadFile(request: UploadRequest): Promise<UploadResponse> {
+    try {
+      const result = await this.irysService.uploadFile(request);
+      return result;
+    } catch (error) {
+      console.error('Irys L1 업로드 실패:', error);
+      throw error;
+    }
+  }
+}
 ```
 
-## 4. 테스트 및 검증
+## 4. Irys L1 특성 이해
 
-### 4.1 연결 테스트
-```python
-async def test_irys_connection():
-    bridge = RealIrysBridge()
-    
-    # 작은 테스트 파일 생성
-    test_file = Path("test_upload.txt")
-    test_file.write_text("Irys 연결 테스트")
-    
-    try:
-        result = await bridge.upload_file(
-            file_path=str(test_file),
-            tags={"type": "test", "description": "연결 테스트"}
-        )
-        print(f"업로드 성공: {result}")
-        
-        # 실제 URL에서 파일 확인
-        print(f"파일 URL: {result['url']}")
-        
-    except Exception as e:
-        print(f"연결 실패: {e}")
-    finally:
-        test_file.unlink()
+### 4.1 Irys L1 vs Arweave
+- **Irys L1**: 독립적인 Layer 1 블록체인 (datachain)
+- **목적**: 저렴한 온체인 데이터 저장
+- **토큰**: 자체 토큰 시스템 사용
+- **GraphQL**: `https://uploader.irys.xyz/graphql` 엔드포인트
+- **게이트웨이**: `https://uploader.irys.xyz`
 
-# 실행
-asyncio.run(test_irys_connection())
+### 4.2 주요 차이점
+```typescript
+// Irys L1 설정
+const irys = new Irys({
+  url: 'https://uploader.irys.xyz',  // Irys L1 게이트웨이
+  token: 'ethereum',                  // 지원되는 토큰 타입
+  key: privateKeyUint8Array,          // 32바이트 Uint8Array
+});
+
+// Arweave 설정 (참고용 - Irys L1과의 차이점 비교)
+const arweave = new Arweave({
+  host: 'arweave.net',
+  port: 443,
+  protocol: 'https'
+});
 ```
 
-### 4.2 에러 처리 개선
-```python
-class IrysError(Exception):
-    """Irys 관련 에러"""
-    pass
+## 5. 테스트 및 검증
 
-class NetworkError(IrysError):
-    """네트워크 에러"""
-    pass
+### 5.1 연결 테스트
+```typescript
+async function testIrysConnection() {
+  const privateKey = process.env.IRYS_PRIVATE_KEY || '';
+  const irysService = new IrysService(privateKey);
+  
+  // 작은 테스트 파일 생성
+  const fs = require('fs');
+  const testFile = 'test_upload.txt';
+  fs.writeFileSync(testFile, 'Irys L1 연결 테스트');
+  
+  try {
+    const result = await irysService.uploadFile({
+      filePath: testFile,
+      tags: [{ name: 'type', value: 'test' }],
+      contentType: 'text/plain',
+      description: '연결 테스트'
+    });
+    
+    console.log('업로드 성공:', result);
+    console.log('파일 URL:', result.url);
+    
+  } catch (error) {
+    console.error('연결 실패:', error);
+  } finally {
+    fs.unlinkSync(testFile);
+  }
+}
+```
 
-class AuthenticationError(IrysError):
-    """인증 에러"""
-    pass
+### 5.2 에러 처리 개선
+```typescript
+class IrysError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IrysError';
+  }
+}
 
-# 에러 처리 예시
-try:
-    result = await bridge.upload_file(file_path, tags)
-except subprocess.TimeoutExpired:
+class NetworkError extends IrysError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
+class AuthenticationError extends IrysError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
+// 에러 처리 예시
+try {
+  const result = await irysService.uploadFile(request);
+} catch (error) {
+  if (error instanceof NetworkError) {
+    console.error('네트워크 에러:', error.message);
+  } else if (error instanceof AuthenticationError) {
+    console.error('인증 에러:', error.message);
+  } else {
+    console.error('알 수 없는 에러:', error);
+  }
+}
+```
     raise NetworkError("업로드 시간 초과")
 except json.JSONDecodeError:
     raise NetworkError("응답 파싱 오류")

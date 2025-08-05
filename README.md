@@ -1,185 +1,137 @@
-# Irys MCP (Model Context Protocol)
+# Irys MCP Server
 
-A comprehensive Model Context Protocol (MCP) implementation for Irys decentralized storage network, built with TypeScript.
+Irys L1 메인넷 및 테스트넷과 연동하는 Model Context Protocol (MCP) 서버입니다.
 
-## Features
+## 🚀 빠른 시작
 
-### Core Features
-- **File Upload/Download**: Upload and download files to/from Irys network
-- **File Search**: Search files using GraphQL queries
-- **Batch Operations**: Upload and download multiple files efficiently
-- **Version Management**: Create and manage file versions
-- **Share Management**: Control file sharing and access permissions
-
-### Advanced Features
-- **Encryption**: Client-side file encryption/decryption with AES-256-CBC
-- **Data Contracts**: Conditional access control based on time, balance, or user lists
-- **Multi-token Support**: Support for Ethereum, Solana, Aptos, and Arweave tokens
-- **Directory Upload**: Recursively upload entire directories
-- **Category & Tag Management**: Organize files with categories and tags
-- **Performance Monitoring**: Track upload/download performance metrics
-- **Plugin System**: Extensible plugin architecture
-- **Advanced Statistics**: Detailed analytics and reporting
-
-### File Management
-- **File Deletion**: Mark files as deleted (Irys doesn't support actual deletion)
-- **File Restoration**: Restore previously deleted files
-- **Batch Download**: Download multiple files simultaneously
-- **Version Rollback**: Rollback to previous file versions
-
-## Installation
+### 1. 의존성 설치
 
 ```bash
 npm install
 ```
 
-## Configuration
+### 2. 환경 변수 설정
 
-Create a `.env` file in the root directory:
+`.env` 파일을 생성하고 다음 내용을 추가하세요:
 
 ```env
+# Irys L1 개인키 (64자 hex 형식)
 IRYS_PRIVATE_KEY=your-private-key-here
-IRYS_GATEWAY_URL=https://node2.irys.xyz
+
+# Irys L1 네트워크 타입 (mainnet 또는 testnet)
+IRYS_NETWORK=mainnet
+
+# Irys L1 RPC URL (선택사항 - 네트워크 타입에 따라 자동 설정됨)
+# 메인넷: https://uploader.irys.xyz
+# 테스트넷: https://testnet-rpc.irys.xyz/v1
+IRYS_GATEWAY_URL=https://uploader.irys.xyz
 ```
 
-### Private Key Types
-- **Ethereum**: `0x...` hex string
-- **Solana**: Base58 encoded string
-- **Aptos**: Hex string
-- **Arweave**: JSON key file content
+### 3. 서버 실행
 
-## Usage
+```bash
+npm start
+```
 
-### Start the MCP Server
+## 🔧 개발
+
+### 빌드
+
+```bash
+npm run build
+```
+
+### 개발 모드
 
 ```bash
 npm run dev
 ```
 
-### Build and Run
+### 테스트
 
 ```bash
-npm run build
-npm start
-```
+# 메인넷 테스트
+npm test tests/real-irys.test.ts
 
-## API Tools
+# 테스트넷 테스트
+npm test tests/real-irys-testnet.test.ts
 
-The MCP server provides 29 tools for AI model interaction:
-
-### File Operations
-- `irys_upload_file`: Upload a file to Irys network
-- `irys_download_file`: Download a file from Irys network
-- `irys_search_files`: Search files using various criteria
-- `irys_delete_file`: Mark a file as deleted
-- `irys_restore_file`: Restore a deleted file
-
-### Batch Operations
-- `irys_batch_upload`: Upload multiple files
-- `irys_batch_download`: Download multiple files
-
-### Version Management
-- `irys_create_version`: Create a new file version
-- `irys_rollback_version`: Rollback to a previous version
-
-### Encryption
-- `irys_encrypt_file`: Encrypt a local file
-- `irys_decrypt_file`: Decrypt a local file
-- `irys_upload_encrypted_file`: Upload an encrypted file
-- `irys_download_encrypted_file`: Download and decrypt a file
-
-### Data Contracts
-- `irys_upload_with_data_contract`: Upload with access control
-- `irys_validate_data_contract`: Validate contract conditions
-- `irys_download_with_data_contract`: Download with contract validation
-
-### Directory Operations
-- `irys_upload_directory`: Upload an entire directory
-
-### Management
-- `irys_manage_categories`: Manage file categories
-- `irys_manage_tags`: Manage file tags
-- `irys_monitor_performance`: Monitor system performance
-- `irys_manage_plugins`: Manage plugins
-- `irys_get_advanced_stats`: Get detailed statistics
-
-### Network Operations
-- `irys_check_connection`: Check network connectivity
-- `irys_get_balance`: Get wallet balance
-- `irys_get_file_info`: Get file information
-- `irys_get_stats`: Get basic statistics
-- `irys_switch_token_type`: Switch between token types
-- `irys_update_share_settings`: Update file sharing settings
-- `irys_revoke_share`: Revoke file sharing access
-
-## Testing
-
-Run all tests:
-```bash
+# 모든 테스트
 npm test
 ```
 
-Run specific test suites:
+## 📚 사용법
+
+### 기본 기능
+
+- **파일 업로드**: Irys L1에 파일 업로드
+- **파일 다운로드**: Irys L1에서 파일 다운로드
+- **파일 검색**: 태그와 메타데이터로 파일 검색
+- **통계 조회**: 업로드된 파일들의 통계 정보
+
+### 고급 기능
+
+- **배치 업로드**: 여러 파일을 한 번에 업로드
+- **버전 관리**: 파일 버전 생성 및 관리
+- **공유 설정**: 파일 공유 권한 관리
+- **카테고리 관리**: 파일 카테고리 생성 및 관리
+- **태그 관리**: 파일 태그 생성 및 관리
+- **성능 모니터링**: 업로드/다운로드 성능 추적
+
+## 🌐 네트워크 정보
+
+### 메인넷
+- **네트워크**: Irys L1 메인넷
+- **RPC URL**: https://uploader.irys.xyz
+- **토큰**: IRYS
+- **소수점**: 18
+- **서비스 클래스**: `IrysService`
+
+### 테스트넷
+- **네트워크**: Irys L1 테스트넷
+- **RPC URL**: https://testnet-rpc.irys.xyz/v1
+- **Chain ID**: 1270
+- **토큰**: IRYS (mIRYS)
+- **소수점**: 18
+- **서비스 클래스**: `IrysTestnetService`
+
+## 🔄 네트워크 전환
+
+환경 변수 `IRYS_NETWORK`를 변경하여 메인넷과 테스트넷 간 전환이 가능합니다:
+
 ```bash
-npm run test:unit
-npm run test:integration
-npm run test:performance
+# 메인넷 사용
+export IRYS_NETWORK=mainnet
+
+# 테스트넷 사용
+export IRYS_NETWORK=testnet
 ```
 
-## Project Structure
+## 🏗️ 아키텍처
 
-```
-src/
-├── index.ts                 # Main entry point
-├── types/
-│   └── index.ts            # TypeScript types and Zod schemas
-├── services/
-│   ├── IrysService.ts      # Core Irys operations
-│   └── IrysAdvancedService.ts # Advanced features
-└── server/
-    ├── IrysMCPServer.ts    # Main MCP server
-    └── IrysAdvancedMCPServer.ts # Advanced MCP server
+### 서비스 클래스
 
-tests/
-├── unit.test.ts           # Unit tests
-├── integration.test.ts    # Integration tests
-├── performance.test.ts    # Performance tests
-├── advanced.test.ts       # Advanced feature tests
-└── comprehensive.test.ts  # Comprehensive tests
+#### IrysService (메인넷)
+- 메인넷 전용 서비스 클래스
+- 모든 기능이 실제 Irys L1 메인넷과 연동
+- `src/services/IrysService.ts`
 
-examples/
-└── basic-usage.ts         # Usage examples
-```
+#### IrysTestnetService (테스트넷)
+- 테스트넷 전용 서비스 클래스
+- 메인넷과 동일한 기능을 테스트넷에서 제공
+- 호환성 문제 해결을 위해 메인넷 URL을 사용하여 SDK 초기화
+- `src/services/IrysTestnetService.ts`
 
-## Dependencies
+### 테스트 파일
 
-### Core Dependencies
-- `@irys/sdk`: Irys JavaScript SDK
-- `zod`: Schema validation
-- `dotenv`: Environment variable management
-- `mime-types`: MIME type detection
+#### 메인넷 테스트
+- `tests/real-irys.test.ts`
+- 메인넷의 모든 기능을 실제로 테스트
 
-### Advanced Dependencies
-- `@irys/upload`: Advanced upload features
-- `@irys/query`: Advanced querying
-- `@irys/bundles`: File bundling
-- `bignumber.js`: Precise number handling
-- `csv-parse/csv-stringify`: CSV processing
-- `async-retry`: Retry logic
-- `base64url`: Base64 URL encoding
+#### 테스트넷 테스트
+- `tests/real-irys-testnet.test.ts`
+- 테스트넷의 모든 기능을 실제로 테스트
 
-## Contributing
+## 📝 라이선스
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new features
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-For issues and questions, please open an issue on GitHub. 
+MIT License 

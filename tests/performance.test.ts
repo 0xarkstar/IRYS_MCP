@@ -1,18 +1,27 @@
 import { IrysMCPServer } from '../src/server/IrysMCPServer';
+import { IrysAdvancedMCPServer } from '../src/server/IrysAdvancedMCPServer';
+import crypto from 'crypto';
 import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
+
+// 테스트용 개인키 생성 (32바이트)
+const generateTestPrivateKey = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
 
 // 환경변수 로드
 config();
 
 describe('Irys MCP 성능 테스트', () => {
-  let server: IrysMCPServer;
+  let mcpServer: IrysMCPServer;
+  let advancedMcpServer: IrysAdvancedMCPServer;
+  const privateKey = process.env.IRYS_PRIVATE_KEY || generateTestPrivateKey();
   let testFiles: string[] = [];
 
   beforeAll(() => {
-    const privateKey = process.env.IRYS_PRIVATE_KEY || 'test-private-key';
-    server = new IrysMCPServer(privateKey);
+    mcpServer = new IrysMCPServer(privateKey);
+    advancedMcpServer = new IrysAdvancedMCPServer(privateKey);
   });
 
   afterAll(() => {
@@ -28,7 +37,7 @@ describe('Irys MCP 성능 테스트', () => {
     test('연결 확인 응답 시간 측정', async () => {
       const startTime = Date.now();
       
-      const isConnected = await server.irysService.checkConnection();
+      const isConnected = await mcpServer.irysService.checkConnection();
       
       const endTime = Date.now();
       const responseTime = endTime - startTime;
@@ -42,7 +51,7 @@ describe('Irys MCP 성능 테스트', () => {
     test('잔액 조회 응답 시간 측정', async () => {
       const startTime = Date.now();
       
-      const balance = await server.irysService.getBalance();
+      const balance = await mcpServer.irysService.getBalance();
       
       const endTime = Date.now();
       const responseTime = endTime - startTime;
@@ -63,7 +72,7 @@ describe('Irys MCP 성능 테스트', () => {
 
       const startTime = Date.now();
       
-                    const uploadResult = await server.irysService.uploadFile({
+                    const uploadResult = await mcpServer.irysService.uploadFile({
                 filePath,
                 isPublic: true,
                 tags: {
@@ -91,7 +100,7 @@ describe('Irys MCP 성능 테스트', () => {
       const startTime = Date.now();
       
       try {
-        const uploadResult = await server.irysService.uploadFile({
+        const uploadResult = await mcpServer.irysService.uploadFile({
           filePath,
           isPublic: true,
           tags: {
@@ -130,7 +139,7 @@ describe('Irys MCP 성능 테스트', () => {
       writeFileSync(filePath, content, 'utf8');
       testFiles.push(filePath);
 
-                    const uploadResult = await server.irysService.uploadFile({
+                    const uploadResult = await mcpServer.irysService.uploadFile({
                 filePath,
                 isPublic: true,
                 tags: {
@@ -148,7 +157,7 @@ describe('Irys MCP 성능 테스트', () => {
 
       const startTime = Date.now();
       
-      const downloadResult = await server.irysService.downloadFile({
+      const downloadResult = await mcpServer.irysService.downloadFile({
         transactionId: uploadedTransactionId,
         outputPath: downloadPath
       });
@@ -168,7 +177,7 @@ describe('Irys MCP 성능 테스트', () => {
     test('파일 검색 응답 시간 측정', async () => {
       const startTime = Date.now();
       
-                    const searchResult = await server.irysService.searchFiles({
+                    const searchResult = await mcpServer.irysService.searchFiles({
                 query: 'Content-Type:text/plain',
                 limit: 10,
                 offset: 0
@@ -209,7 +218,7 @@ describe('Irys MCP 성능 테스트', () => {
 
       const startTime = Date.now();
       
-                    const batchResult = await server.irysService.batchUpload({
+                    const batchResult = await mcpServer.irysService.batchUpload({
                 files: batchFiles,
                 isPublic: true
               });
@@ -234,7 +243,7 @@ describe('Irys MCP 성능 테스트', () => {
       const startTime = Date.now();
       
       for (let i = 0; i < concurrentRequests; i++) {
-        promises.push(server.irysService.checkConnection());
+        promises.push(mcpServer.irysService.checkConnection());
       }
       
       const results = await Promise.all(promises);
@@ -257,7 +266,7 @@ describe('Irys MCP 성능 테스트', () => {
       const startTime = Date.now();
       
       for (let i = 0; i < concurrentRequests; i++) {
-                        promises.push(server.irysService.searchFiles({
+                        promises.push(mcpServer.irysService.searchFiles({
                   query: `Test-Type:performance-${i % 2 === 0 ? 'small' : 'medium'}`,
                   limit: 5,
                   offset: 0
@@ -289,7 +298,7 @@ describe('Irys MCP 성능 테스트', () => {
       const initialMemory = process.memoryUsage();
       
       try {
-        const uploadResult = await server.irysService.uploadFile({
+        const uploadResult = await mcpServer.irysService.uploadFile({
           filePath,
           isPublic: true,
           tags: {
@@ -323,7 +332,7 @@ describe('Irys MCP 성능 테스트', () => {
       const startTime = Date.now();
       
       try {
-        await server.irysService.getFileInfo('invalid-transaction-id');
+        await mcpServer.irysService.getFileInfo('invalid-transaction-id');
       } catch (error) {
         const endTime = Date.now();
         const errorResponseTime = endTime - startTime;

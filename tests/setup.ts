@@ -1,34 +1,64 @@
-import { config } from 'dotenv';
-import { join } from 'path';
+import dotenv from 'dotenv';
+import { randomBytes } from 'crypto';
 
-// 환경변수 로드
-config({ path: join(__dirname, '..', '.env') });
+// 환경 변수 로드
+dotenv.config();
 
-// 테스트 환경 설정
-process.env.NODE_ENV = 'test';
+// 테스트용 개인키 생성 함수
+function generateTestPrivateKey(): string {
+  return randomBytes(32).toString('hex');
+}
 
-// 글로벌 테스트 타임아웃 설정
-jest.setTimeout(60000);
+// 환경 변수가 설정되지 않은 경우 테스트용 값으로 설정
+if (!process.env.IRYS_PRIVATE_KEY) {
+  process.env.IRYS_PRIVATE_KEY = generateTestPrivateKey();
+  console.log('🔑 테스트용 개인키 생성됨:', process.env.IRYS_PRIVATE_KEY);
+}
 
-// 콘솔 로그 억제 (테스트 중 불필요한 로그 방지)
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
+if (!process.env.IRYS_NETWORK) {
+  process.env.IRYS_NETWORK = 'mainnet';
+  console.log('🌍 IRYS_NETWORK 설정됨: mainnet');
+}
 
+if (!process.env.IRYS_GATEWAY_URL) {
+  process.env.IRYS_GATEWAY_URL = 'https://uploader.irys.xyz';
+  console.log('🌐 IRYS_GATEWAY_URL 설정됨: https://uploader.irys.xyz');
+}
+
+// Jest 설정
+export default {
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  testMatch: ['**/tests/**/*.test.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  verbose: true,
+  forceExit: true,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+};
+
+// 전역 테스트 설정
 beforeAll(() => {
-  // 테스트 시작 시 로그 억제
-  if (process.env.SUPPRESS_LOGS === 'true') {
-    console.log = jest.fn();
-    console.error = jest.fn();
-    console.warn = jest.fn();
-  }
+  console.log('🧪 테스트 환경 설정 완료');
+  console.log(`🔑 개인키: ${process.env.IRYS_PRIVATE_KEY ? '설정됨' : '설정되지 않음'}`);
+  console.log(`🌍 네트워크: ${process.env.IRYS_NETWORK}`);
+  console.log(`🌐 Gateway URL: ${process.env.IRYS_GATEWAY_URL}`);
 });
 
 afterAll(() => {
-  // 테스트 종료 시 로그 복원
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
+  console.log('🧹 테스트 환경 정리 완료');
+});
+
+// 각 테스트 후 정리
+afterEach(() => {
+  // 테스트 간 격리를 위한 정리 작업
+  jest.clearAllMocks();
 });
 
 // 테스트 환경 변수 검증

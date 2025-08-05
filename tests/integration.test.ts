@@ -11,13 +11,35 @@ describe('Irys MCP 통합 테스트', () => {
   let testFilePath: string;
   let uploadedTransactionId: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const privateKey = process.env.IRYS_PRIVATE_KEY;
     if (!privateKey) {
       throw new Error('IRYS_PRIVATE_KEY 환경변수가 설정되지 않았습니다.');
     }
 
     server = new IrysMCPServer(privateKey);
+    
+    // SDK 초기화 대기
+    let retries = 0;
+    const maxRetries = 10;
+    while (retries < maxRetries) {
+      try {
+        const isConnected = await server.irysService.checkConnection();
+        if (isConnected) {
+          console.log('✅ Irys SDK 초기화 완료');
+          break;
+        }
+      } catch (error) {
+        console.log(`⏳ SDK 초기화 대기 중... (${retries + 1}/${maxRetries})`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      retries++;
+    }
+
+    if (retries >= maxRetries) {
+      console.warn('⚠️ SDK 초기화 시간 초과, 테스트를 계속 진행합니다.');
+    }
+
     testFilePath = join(__dirname, 'test-file.txt');
   });
 
@@ -32,13 +54,13 @@ describe('Irys MCP 통합 테스트', () => {
     test('Irys 네트워크 연결 확인', async () => {
       const isConnected = await server.irysService.checkConnection();
       expect(isConnected).toBe(true);
-    }, 10000);
+    }, 15000);
 
     test('잔액 조회', async () => {
       const balance = await server.irysService.getBalance();
       expect(typeof balance).toBe('string');
       expect(parseFloat(balance)).toBeGreaterThanOrEqual(0);
-    }, 10000);
+    }, 15000);
   });
 
   describe('파일 업로드 테스트', () => {

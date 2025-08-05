@@ -2,6 +2,12 @@ import { IrysAdvancedMCPServer } from '../src/server/IrysAdvancedMCPServer';
 import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmdirSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
+import crypto from 'crypto';
+
+// 테스트용 개인키 생성 (32바이트)
+const generateTestPrivateKey = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
 
 config(); // Load environment variables
 
@@ -11,7 +17,7 @@ describe('Irys 고급 기능 테스트', () => {
   const testCSVPath = join(__dirname, 'test-data.csv');
 
   beforeAll(() => {
-    const privateKey = process.env.IRYS_PRIVATE_KEY || 'test-private-key';
+    const privateKey = process.env.IRYS_PRIVATE_KEY || generateTestPrivateKey();
     advancedServer = new IrysAdvancedMCPServer(privateKey, 'ethereum');
     
     // 테스트 디렉토리 생성

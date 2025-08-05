@@ -72,7 +72,7 @@ export class IrysAdvancedService {
   constructor(
     privateKey: string,
     tokenType: TokenType = 'ethereum',
-    gatewayUrl: string = 'https://node2.irys.xyz'
+    gatewayUrl: string = 'https://uploader.irys.xyz'
   ) {
     this.privateKey = privateKey;
     this.tokenType = tokenType;

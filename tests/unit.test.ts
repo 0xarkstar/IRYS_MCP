@@ -3,34 +3,39 @@ import { IrysMCPServer } from '../src/server/IrysMCPServer';
 import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
+import crypto from 'crypto';
 
 // Load environment variables
 config();
 
+// 테스트용 개인키 생성 (32바이트)
+const generateTestPrivateKey = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
 describe('Irys MCP Unit Tests', () => {
-  let irysService: IrysService;
+  const privateKey = process.env.IRYS_PRIVATE_KEY || generateTestPrivateKey();
   let server: IrysMCPServer;
-  const testPrivateKey = 'test-private-key';
-
+  
   beforeAll(() => {
-    irysService = new IrysService(testPrivateKey);
-    server = new IrysMCPServer(testPrivateKey);
+    server = new IrysMCPServer(privateKey);
   });
-
+  
   describe('IrysService Class Tests', () => {
     test('IrysService instance creation', () => {
-      expect(irysService).toBeInstanceOf(IrysService);
-      expect(irysService).toHaveProperty('irys');
+      const service = new IrysService(privateKey);
+      expect(service).toBeInstanceOf(IrysService);
+      expect(service).toHaveProperty('irys');
     });
 
     test('Default gateway URL setting', () => {
-      const service = new IrysService(testPrivateKey);
+      const service = new IrysService(privateKey);
       expect(service).toBeInstanceOf(IrysService);
     });
 
     test('Custom gateway URL setting', () => {
       const customGateway = 'https://custom.irys.xyz';
-      const service = new IrysService(testPrivateKey, customGateway);
+      const service = new IrysService(privateKey, customGateway);
       expect(service).toBeInstanceOf(IrysService);
     });
   });
