@@ -1,4 +1,5 @@
-import Irys from '@irys/sdk';
+// Dynamic import for @irys/sdk to handle ES module compatibility
+let Irys: any;
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as mime from 'mime-types';
@@ -20,7 +21,7 @@ import {
 export type NetworkType = 'mainnet' | 'testnet';
 
 export class IrysService {
-  private irys: Irys | undefined;
+  private irys: any | undefined;
   private gatewayUrl: string;
   private privateKey: string;
   private networkType: NetworkType;
@@ -32,32 +33,32 @@ export class IrysService {
   ) {
     this.privateKey = privateKey;
     
-    // 네트워크 타입 결정
+    // Determine network type
     if (networkType) {
       this.networkType = networkType;
     } else if (gatewayUrl) {
-      // URL에서 네트워크 타입 추론
+      // Infer network type from URL
       this.networkType = this.inferNetworkTypeFromUrl(gatewayUrl);
     } else {
-      // 환경 변수에서 네트워크 타입 확인
+      // Check network type from environment variable
       this.networkType = (process.env.IRYS_NETWORK as NetworkType) || 'mainnet';
     }
     
-    // 네트워크 타입에 따른 기본 URL 설정
+    // Set default URL based on network type
     if (gatewayUrl) {
       this.gatewayUrl = gatewayUrl;
     } else {
       this.gatewayUrl = this.getDefaultUrlForNetwork(this.networkType);
     }
     
-    // Irys SDK 초기화 시도 (비동기로 처리)
+    // Irys SDK initialization attempt (handled asynchronously)
     this.initializeIrysSDK().catch(error => {
-      console.error('❌ SDK 초기화 실패:', error);
+      console.error('❌ SDK initialization failed:', error);
     });
   }
 
   /**
-   * URL에서 네트워크 타입을 추론
+   * Infer network type from URL
    */
   private inferNetworkTypeFromUrl(url: string): NetworkType {
     if (url.includes('testnet') || url.includes('devnet')) {
@@ -67,7 +68,7 @@ export class IrysService {
   }
 
   /**
-   * 네트워크 타입에 따른 기본 URL 반환
+   * Return default URL based on network type
    */
   private getDefaultUrlForNetwork(networkType: NetworkType): string {
     switch (networkType) {
@@ -80,14 +81,14 @@ export class IrysService {
   }
 
   /**
-   * 현재 네트워크 타입 반환
+   * Return current network type
    */
   public getNetworkType(): NetworkType {
     return this.networkType;
   }
 
   /**
-   * 현재 Gateway URL 반환
+   * Return current Gateway URL
    */
   public getGatewayUrl(): string {
     return this.gatewayUrl;
@@ -95,63 +96,64 @@ export class IrysService {
 
   private async initializeIrysSDK(): Promise<void> {
     try {
-      const networkLabel = this.networkType === 'testnet' ? '테스트넷' : '메인넷';
-      console.log(`🔧 Irys L1 ${networkLabel} SDK 초기화 시작...`);
-      console.log(`🔑 개인키 길이: ${this.privateKey.length}`);
-      console.log(`🌐 RPC URL: ${this.gatewayUrl}`);
-      console.log(`🌍 네트워크: ${this.networkType}`);
+      const networkLabel = this.networkType === 'testnet' ? 'Testnet' : 'Mainnet';
+      console.log(`🔧 Irys L1 ${networkLabel} SDK initialization started...`);
+      console.log(`🔑 Private key length: ${this.privateKey.length}`);
+      console.log(`🌍 Network: ${this.networkType}`);
+      console.log(`🌐 Gateway URL: ${this.gatewayUrl}`);
 
-      // 개인키 형식 검증
-      if (typeof this.privateKey !== 'string') {
-        throw new Error('개인키는 문자열이어야 합니다.');
+      // Dynamic import of @irys/sdk
+      if (!Irys) {
+        const irysModule = await import('@irys/sdk');
+        Irys = irysModule.default;
       }
 
-      let processedPrivateKey = this.privateKey;
-
-      // 0x 접두사 제거 (66자 -> 64자)
-      if (this.privateKey.startsWith('0x') && this.privateKey.length === 66) {
-        processedPrivateKey = this.privateKey.slice(2);
-        console.log('✅ 0x 접두사 제거됨 (66자 -> 64자)');
+      // Handle 0x prefix for 66-character keys
+      let processedKey = this.privateKey;
+      if (this.privateKey.length === 66 && this.privateKey.startsWith('0x')) {
+        processedKey = this.privateKey.slice(2);
+        console.log('🔧 Removed 0x prefix from private key');
       }
 
-      // 64자 hex 형식 검증
-      if (processedPrivateKey.length !== 64) {
-        throw new Error(`지원되지 않는 개인키 형식: 길이 ${this.privateKey.length}. 64자 hex 또는 66자(0x 접두사 포함)만 지원됩니다.`);
+      // Validate key format
+      if (processedKey.length !== 64) {
+        throw new Error(`Unsupported private key format: length ${this.privateKey.length}. Only 64-character hex or 66-character (with 0x prefix) supported.`);
       }
 
-      // hex 형식 검증
-      if (!/^[0-9a-fA-F]{64}$/.test(processedPrivateKey)) {
-        throw new Error('개인키는 64자 hex 형식이어야 합니다.');
+      if (!/^[0-9a-fA-F]+$/.test(processedKey)) {
+        throw new Error('Private key must be in 64-character hex format.');
       }
 
-      console.log('✅ 64자 hex 개인키 형식 검증 완료');
-
-      // Irys SDK 초기화
-      this.irys = new Irys({
-        url: this.gatewayUrl,
-        token: 'ethereum',
-        key: processedPrivateKey,
-      });
-
-      console.log(`✅ Irys L1 ${networkLabel} SDK 초기화 성공`);
-      console.log(`📍 RPC URL: ${this.gatewayUrl}`);
-      console.log(`🔑 Address: ${this.irys.address}`);
-
-      // 연결 테스트
       try {
-        const balance = await this.irys.getLoadedBalance();
-        console.log(`💰 잔액: ${balance}`);
-        console.log(`✅ Irys L1 ${networkLabel} 연결 확인됨`);
-      } catch (balanceError: any) {
-        console.warn('⚠️ 잔액 조회 실패 (계속 진행):', balanceError.message);
-        // 잔액 조회 실패는 치명적이지 않음
-      }
+        // Convert hex string to Uint8Array
+        const keyBytes = new Uint8Array(Buffer.from(processedKey, 'hex'));
+        
+        // Initialize Irys SDK
+        this.irys = new Irys({
+          url: this.gatewayUrl,
+          token: 'ethereum',
+          key: keyBytes,
+        });
 
+        console.log('✅ Irys L1 Mainnet SDK initialization successful');
+        console.log(`📍 RPC URL: ${this.gatewayUrl}`);
+        console.log(`🔑 Address: ${this.irys.address}`);
+
+        // Test connection by getting balance
+        const balance = await this.irys.getLoadedBalance();
+        console.log(`💰 Initial balance: ${balance}`);
+
+        // SDK initialization completed
+        console.log('🎉 Irys L1 Mainnet SDK ready for use');
+      } catch (error: any) {
+        console.error('❌ Irys L1 Mainnet SDK initialization failed:', error.message);
+        throw new Error(`Irys L1 Mainnet SDK initialization failed: ${error.message}`);
+      }
     } catch (error: any) {
-      const networkLabel = this.networkType === 'testnet' ? '테스트넷' : '메인넷';
-      console.error(`❌ Irys L1 ${networkLabel} SDK 초기화 실패:`, error.message);
-      console.error('📋 오류 상세:', error);
-      console.log('📝 시뮬레이션 모드로 전환합니다. 실제 업로드/다운로드는 작동하지 않을 수 있습니다.');
+      const networkLabel = this.networkType === 'testnet' ? 'Testnet' : 'Mainnet';
+      console.error(`❌ Irys L1 ${networkLabel} SDK initialization failed:`, error.message);
+      console.error('📋 Error details:', error);
+      console.log('📝 Switching to simulation mode. Actual uploads/downloads may not work.');
       this.irys = undefined;
     }
   }
@@ -196,7 +198,7 @@ export class IrysService {
       const fileName = filePath.split('/').pop() || 'unknown';
       const detectedContentType = contentType || mime.lookup(fileName) || 'application/octet-stream';
 
-      // 파일 암호화
+      // File encryption
       const { encryptedData, salt, iv } = this.encryptFile(fileBuffer, password);
 
       const uploadTags = [
@@ -219,12 +221,12 @@ export class IrysService {
       uploadTags.push({ name: 'Upload-Timestamp', value: Date.now().toString() });
 
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
       const receipt = await this.irys.upload(encryptedData, { tags: uploadTags });
 
       if (!receipt || !receipt.id) {
-        throw new IrysError('암호화된 파일 업로드에 실패했습니다: 트랜잭션 ID를 받지 못했습니다.');
+        throw new IrysError('Encrypted file upload failed: transaction ID not received.');
       }
 
       const transactionId = receipt.id;
@@ -241,11 +243,11 @@ export class IrysService {
         timestamp,
       };
     } catch (error: any) {
-      console.error('암호화된 파일 업로드 중 오류 발생:', error);
+      console.error('Error during encrypted file upload:', error);
       if (error.message.includes('Not enough funds')) {
-        throw new IrysError(`잔액 부족: ${error.message}`, 'INSUFFICIENT_FUNDS');
+        throw new IrysError(`Insufficient funds: ${error.message}`, 'INSUFFICIENT_FUNDS');
       }
-      throw new IrysError(`암호화된 파일 업로드에 실패했습니다: ${error.message}`);
+      throw new IrysError(`Encrypted file upload failed: ${error.message}`);
     }
   }
 
@@ -256,7 +258,7 @@ export class IrysService {
       const response = await fetch(`${this.gatewayUrl}/${transactionId}`);
 
       if (!response.ok) {
-        throw new FileNotFoundError(`파일을 찾을 수 없습니다: ${transactionId}`);
+        throw new FileNotFoundError(`File not found: ${transactionId}`);
       }
 
       const data = await response.arrayBuffer();
@@ -267,20 +269,20 @@ export class IrysService {
       const fileInfo = await this.getFileInfo(transactionId);
       const tags = fileInfo.tags || {};
       
-      console.log('파일 태그:', tags); // 디버깅용
+      console.log('File tags:', tags); // Debugging
       
       const salt = Buffer.from(tags['Salt'] || '', 'hex');
       const iv = Buffer.from(tags['IV'] || '', 'hex');
 
       if (!salt.length || !iv.length) {
-        console.error('암호화 메타데이터 누락:', { 
+        console.error('Missing encryption metadata:', { 
           hasSalt: !!tags['Salt'], 
           hasIV: !!tags['IV'],
           saltLength: salt.length,
           ivLength: iv.length,
           allTags: Object.keys(tags)
         });
-        throw new ValidationError('암호화 메타데이터를 찾을 수 없습니다. 파일이 암호화되지 않았거나 메타데이터가 손실되었습니다.');
+        throw new ValidationError('Encryption metadata not found. File might not be encrypted or metadata is lost.');
       }
 
       // 파일 복호화
@@ -294,7 +296,7 @@ export class IrysService {
         return { content: decryptedBuffer, size, contentType, transactionId };
       }
     } catch (error: any) {
-      console.error(`암호화된 파일 다운로드 중 오류 발생 (ID: ${transactionId}):`, error);
+      console.error(`Error during encrypted file download (ID: ${transactionId}):`, error);
       if (error.response && error.response.status === 404) {
         throw new FileNotFoundError(`File not found for transaction ID: ${transactionId}`);
       }
@@ -309,7 +311,7 @@ export class IrysService {
     try {
       // 파일 존재 확인
       if (!existsSync(request.filePath)) {
-        throw new FileNotFoundError(`파일을 찾을 수 없습니다: ${request.filePath}`);
+        throw new FileNotFoundError(`File not found: ${request.filePath}`);
       }
 
       // 파일 읽기
@@ -337,9 +339,9 @@ export class IrysService {
       tags.push({ name: 'Is-Public', value: request.isPublic ? 'true' : 'false' });
       tags.push({ name: 'Upload-Timestamp', value: Date.now().toString() });
 
-      // Irys에 업로드
+      // Upload to Irys
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
       const receipt = await this.irys.upload(fileBuffer, { tags });
 
@@ -368,7 +370,7 @@ export class IrysService {
       const response = await fetch(`${this.gatewayUrl}/${request.transactionId}`);
       
       if (!response.ok) {
-        throw new FileNotFoundError(`파일을 찾을 수 없습니다: ${request.transactionId}`);
+        throw new FileNotFoundError(`File not found: ${request.transactionId}`);
       }
 
       const data = await response.arrayBuffer();
@@ -405,16 +407,16 @@ export class IrysService {
   async searchFiles(request: SearchRequest): Promise<SearchResponse> {
     try {
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
 
-      console.log(`�� 메인넷 파일 검색 시작...`);
-      console.log(`🔍 사용자 주소 ${this.irys.address}의 파일들을 검색 중...`);
+      console.log(`🔍 Mainnet file search started...`);
+      console.log(`🔍 Searching files for user address ${this.irys.address}...`);
 
-      // Irys L1 GraphQL 엔드포인트
+      // Irys L1 GraphQL endpoint
       const graphqlEndpoint = 'https://arweave.net/graphql';
 
-      // GraphQL 쿼리 구성
+      // GraphQL query construction
       let query = `
         query GetTransactions($owner: String!, $limit: Int!, $offset: Int!) {
           transactions(
@@ -449,14 +451,14 @@ export class IrysService {
         }
       `;
 
-      // 변수 설정
+      // Set variables
       const variables = {
         owner: this.irys.address,
         limit: request.limit || 20,
         offset: request.offset || 0
       };
 
-      // GraphQL 쿼리 실행
+      // Execute GraphQL query
       const response = await fetch(graphqlEndpoint, {
         method: 'POST',
         headers: {
@@ -469,23 +471,23 @@ export class IrysService {
       });
 
       if (!response.ok) {
-        throw new NetworkError(`GraphQL 쿼리 실패: ${response.status} ${response.statusText}`);
+        throw new NetworkError(`GraphQL query failed: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result = await response.json() as any;
 
       if (result.errors) {
-        console.warn('GraphQL 쿼리 오류, 로컬 데이터로 대체:', result.errors);
-        // GraphQL 쿼리 실패 시 로컬 데이터 사용
+        console.warn('GraphQL query error, using local data as fallback:', result.errors);
+        // Use local data if GraphQL query fails
         return this.getLocalSearchResults(request);
       }
 
-      // GraphQL 결과를 FileInfo 형식으로 변환
+      // Convert GraphQL results to FileInfo format
       const files: FileInfo[] = result.data.transactions.edges.map((edge: any) => {
         const node = edge.node;
         const tags: Record<string, string> = {};
         
-        // 태그를 객체로 변환
+        // Convert tags to object
         node.tags.forEach((tag: any) => {
           tags[tag.name] = tag.value;
         });
@@ -501,7 +503,7 @@ export class IrysService {
         };
       });
 
-      // 필터링 적용
+      // Apply filtering
       let filteredFiles = files;
       
       if (request.query) {
@@ -527,7 +529,7 @@ export class IrysService {
         });
       }
 
-      console.log(`🔍 ${filteredFiles.length}개의 파일 검색됨 (페이지: ${variables.offset}-${variables.offset + variables.limit})`);
+      console.log(`🔍 ${filteredFiles.length} files found (page: ${variables.offset}-${variables.offset + variables.limit})`);
 
       return {
         files: filteredFiles,
@@ -536,10 +538,10 @@ export class IrysService {
       };
 
     } catch (error: any) {
-      console.error('파일 검색 중 오류 발생:', error);
+      console.error('Error during file search:', error);
       
-      // GraphQL 쿼리 실패 시 로컬 데이터로 대체
-      console.log('📝 로컬 데이터로 대체합니다.');
+      // Fallback to local data if GraphQL query fails
+      console.log('📝 Using local data as fallback.');
       return this.getLocalSearchResults(request);
     }
   }
@@ -579,7 +581,7 @@ export class IrysService {
       }
     ];
 
-    // 필터링 적용
+    // Apply filtering
     let filteredFiles = mockFiles;
     
     if (request.query) {
@@ -687,7 +689,7 @@ export class IrysService {
         timestamp: Date.now(),
       };
     } catch (error) {
-      throw new NetworkError(`버전 생성 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new NetworkError(`Version creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -697,17 +699,17 @@ export class IrysService {
   async updateShareSettings(request: ShareRequest): Promise<ShareResponse> {
     try {
       // 실제 구현에서는 Irys의 공유 기능을 사용해야 합니다
-      console.warn('공유 설정 기능은 시뮬레이션됩니다.');
+      console.warn('Share settings are simulated.');
 
       return {
         transactionId: request.transactionId,
         isPublic: request.isPublic,
         allowedUsers: request.allowedUsers || [],
-        expiresAt: request.expiresAt || Date.now() + 30 * 24 * 60 * 60 * 1000, // 30일
+        expiresAt: request.expiresAt || Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
         shareUrl: `${this.gatewayUrl}/${request.transactionId}`,
       };
     } catch (error) {
-      throw new NetworkError(`공유 설정 업데이트 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new NetworkError(`Share settings update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -717,14 +719,14 @@ export class IrysService {
   async getStats(request: StatsRequest): Promise<StatsResponse> {
     try {
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
 
-      // Irys SDK를 사용하여 실제 통계 계산
+      // Calculate actual statistics using Irys SDK
       const balance = await this.irys.getLoadedBalance();
-      console.log(`📊 사용자 잔액: ${balance}`);
+      console.log(`📊 User balance: ${balance}`);
 
-      // 실제 업로드된 파일들의 통계 (현재는 테스트 데이터)
+      // Actual statistics for uploaded files (currently using test data)
       const testFiles = [
         { size: 1024, contentType: 'text/plain', timestamp: Date.now() - 3600000 },
         { size: 2048, contentType: 'image/png', timestamp: Date.now() - 7200000 },
@@ -750,25 +752,25 @@ export class IrysService {
         });
       });
 
-      // 실제 업로드된 파일이 있다면 추가
+      // If there are actual uploaded files, add them
       if (this.irys.address) {
-        console.log(`📊 사용자 주소 ${this.irys.address}의 통계 계산 중...`);
-        // 여기서 실제 Irys SDK를 사용하여 사용자의 파일들을 조회할 수 있음
+        console.log(`📊 Calculating statistics for user address ${this.irys.address}...`);
+        // Here you can use actual Irys SDK to query user's files
       }
 
-      console.log(`📊 총 ${testFiles.length}개 파일, ${totalSize}바이트, ${Object.keys(categories).length}개 카테고리`);
+      console.log(`📊 Total ${testFiles.length} files, ${totalSize} bytes, ${Object.keys(categories).length} categories`);
 
       return {
         totalFiles: testFiles.length,
         totalSize,
         uploads: testFiles.length,
-        downloads: 0, // 다운로드 통계는 별도로 추적 필요
+        downloads: 0, // Download statistics need to be tracked separately
         categories,
         recentActivity,
       };
     } catch (error) {
-      console.error('통계 조회 실패:', error);
-      throw new NetworkError(`통계 조회 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Statistics retrieval failed:', error);
+      throw new NetworkError(`Statistics retrieval failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -777,9 +779,9 @@ export class IrysService {
    */
   async getFileInfo(transactionId: string): Promise<FileInfo> {
     try {
-      // 테스트 환경에서는 시뮬레이션된 응답 반환
+      // In test environment, return simulated response
       if (transactionId.startsWith('test-') || transactionId.startsWith('tx-') || transactionId.startsWith('sim-')) {
-        // 암호화된 파일인지 확인
+        // Check if it's an encrypted file
         const isEncrypted = transactionId.includes('encrypted') || transactionId.includes('enc');
         
         const baseTags: Record<string, string> = { 
@@ -789,7 +791,7 @@ export class IrysService {
           'Test-File': 'true'
         };
 
-        // 암호화된 파일인 경우 암호화 메타데이터 추가
+        // Add encryption metadata if it's an encrypted file
         if (isEncrypted) {
           baseTags['Encrypted'] = 'true';
           baseTags['Encryption-Method'] = 'AES-256-CBC';
@@ -808,23 +810,23 @@ export class IrysService {
         };
       }
 
-      // 실제 Irys API를 사용하여 트랜잭션 정보 가져오기
+      // Get transaction info using actual Irys API
       const response = await fetch(`${this.gatewayUrl}/${transactionId}`);
 
       if (!response.ok) {
-        throw new FileNotFoundError(`파일을 찾을 수 없습니다: ${transactionId}`);
+        throw new FileNotFoundError(`File not found: ${transactionId}`);
       }
 
       const data = await response.arrayBuffer();
       const buffer = Buffer.from(data);
       const contentType = response.headers.get('content-type') || 'application/octet-stream';
 
-      // Irys SDK를 사용하여 트랜잭션 메타데이터 가져오기
+      // Get transaction metadata using Irys SDK
       let tags: Record<string, string> = {};
       try {
         if (this.irys) {
-          // Irys SDK에서 트랜잭션 정보 가져오기 (실제 구현에서는 다른 방법 사용)
-          // 현재는 기본 태그만 설정
+          // Get transaction info from Irys SDK (in actual implementation, use other methods)
+          // Currently, only basic tags are set
           tags = { 
             'App-Name': 'Irys-MCP', 
             'Content-Type': contentType,
@@ -832,8 +834,8 @@ export class IrysService {
           };
         }
       } catch (error) {
-        console.warn('트랜잭션 메타데이터 가져오기 실패, 기본 정보만 사용:', error);
-        // 기본 태그 설정
+        console.warn('Failed to get transaction metadata, using basic info:', error);
+        // Set basic tags
         tags = { 'App-Name': 'Irys-MCP', 'Content-Type': contentType };
       }
 
@@ -850,7 +852,7 @@ export class IrysService {
       if (error instanceof IrysError) {
         throw error;
       }
-      throw new NetworkError(`파일 정보 조회 실패: ${error.message}`);
+      throw new NetworkError(`File info retrieval failed: ${error.message}`);
     }
   }
 
@@ -860,14 +862,14 @@ export class IrysService {
   async checkConnection(): Promise<boolean> {
     try {
       if (!this.irys) {
-        console.warn('Irys SDK가 초기화되지 않았습니다.');
+        console.warn('Irys SDK not initialized.');
         return false;
       }
-      // 간단한 연결 테스트
+      // Simple connection test
       await this.irys.getBalance(this.irys.address);
       return true;
     } catch (error) {
-      console.error('연결 확인 실패:', error);
+      console.error('Connection check failed:', error);
       return false;
     }
   }
@@ -878,12 +880,12 @@ export class IrysService {
   async getBalance(): Promise<string> {
     try {
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
       const balance = await this.irys.getBalance(this.irys.address);
       return balance.toString();
     } catch (error) {
-      throw new NetworkError(`잔액 조회 실패: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new NetworkError(`Balance retrieval failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -900,7 +902,7 @@ export class IrysService {
   }): Promise<UploadResponse> {
     const { filePath, tags, contentType, description, category, isPublic, dataContract } = request;
     if (!existsSync(filePath)) {
-      throw new FileNotFoundError(`파일을 찾을 수 없습니다: ${filePath}`);
+      throw new FileNotFoundError(`File not found: ${filePath}`);
     }
 
     try {
@@ -916,7 +918,7 @@ export class IrysService {
         ...Object.entries(tags || {}).map(([name, value]) => ({ name, value })),
       ];
 
-      // 데이터 계약 조건들을 태그로 추가
+      // Add data contract conditions as tags
       if (dataContract.validFrom) {
         uploadTags.push({ name: 'Valid-From', value: dataContract.validFrom.toString() });
       }
@@ -943,12 +945,12 @@ export class IrysService {
       uploadTags.push({ name: 'Upload-Timestamp', value: Date.now().toString() });
 
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
       const receipt = await this.irys.upload(fileBuffer, { tags: uploadTags });
 
       if (!receipt || !receipt.id) {
-        throw new IrysError('데이터 계약 파일 업로드에 실패했습니다: 트랜잭션 ID를 받지 못했습니다.');
+        throw new IrysError('Data contract file upload failed: transaction ID not received.');
       }
 
       const transactionId = receipt.id;
@@ -965,11 +967,11 @@ export class IrysService {
         timestamp,
       };
     } catch (error: any) {
-      console.error('데이터 계약 파일 업로드 중 오류 발생:', error);
+      console.error('Error during data contract file upload:', error);
       if (error.message.includes('Not enough funds')) {
-        throw new IrysError(`잔액 부족: ${error.message}`, 'INSUFFICIENT_FUNDS');
+        throw new IrysError(`Insufficient funds: ${error.message}`, 'INSUFFICIENT_FUNDS');
       }
-      throw new IrysError(`데이터 계약 파일 업로드에 실패했습니다: ${error.message}`);
+      throw new IrysError(`Data contract file upload failed: ${error.message}`);
     }
   }
 
@@ -983,7 +985,7 @@ export class IrysService {
       const fileInfo = await this.getFileInfo(transactionId);
       const tags = fileInfo.tags || {};
       
-      // 데이터 계약이 있는지 확인
+      // Check if data contract exists
       if (tags['Data-Contract'] !== 'true') {
         return { isValid: true, contract: null };
       }
@@ -999,11 +1001,11 @@ export class IrysService {
 
       const now = Date.now();
 
-      // 시간 기반 검증
+      // Time-based validation
       if (contract.validFrom && now < contract.validFrom) {
         return { 
           isValid: false, 
-          reason: `파일은 ${new Date(contract.validFrom).toISOString()}부터 접근 가능합니다.`,
+          reason: `File is available from ${new Date(contract.validFrom).toISOString()}.`,
           contract 
         };
       }
@@ -1011,30 +1013,30 @@ export class IrysService {
       if (contract.validUntil && now > contract.validUntil) {
         return { 
           isValid: false, 
-          reason: `파일 접근이 ${new Date(contract.validUntil).toISOString()}에 만료되었습니다.`,
+          reason: `File access expired on ${new Date(contract.validUntil).toISOString()}.`,
           contract 
         };
       }
 
-      // 사용자 기반 검증
+      // User-based validation
       if (contract.allowedUsers && contract.allowedUsers.length > 0) {
         if (!userAddress) {
           return { 
             isValid: false, 
-            reason: '이 파일에 접근하려면 사용자 주소가 필요합니다.',
+            reason: 'User address is required to access this file.',
             contract 
           };
         }
         if (!contract.allowedUsers.includes(userAddress)) {
           return { 
             isValid: false, 
-            reason: '이 파일에 접근할 권한이 없습니다.',
+            reason: 'You do not have permission to access this file.',
             contract 
           };
         }
       }
 
-      // 잔액 기반 검증
+      // Balance-based validation
       if (contract.requiredBalance) {
         try {
           const balance = await this.getBalance();
@@ -1044,21 +1046,21 @@ export class IrysService {
           if (currentBalance < requiredBalance) {
             return { 
               isValid: false, 
-              reason: `최소 잔액 ${requiredBalance} AR이 필요합니다. 현재 잔액: ${currentBalance} AR`,
+              reason: `Minimum balance of ${requiredBalance} AR is required. Current balance: ${currentBalance} AR`,
               contract 
             };
           }
         } catch (error) {
-          console.warn('잔액 검증 중 오류 발생:', error);
+          console.warn('Error during balance validation:', error);
         }
       }
 
       return { isValid: true, contract };
     } catch (error: any) {
-      console.error('데이터 계약 검증 중 오류 발생:', error);
+      console.error('Error during data contract validation:', error);
       return { 
         isValid: false, 
-        reason: '데이터 계약 검증에 실패했습니다.',
+        reason: 'Data contract validation failed.',
         contract: null 
       };
     }
@@ -1069,19 +1071,19 @@ export class IrysService {
     const { transactionId, outputPath, userAddress } = request;
     
     try {
-      // 데이터 계약 검증
+      // Data contract validation
       const validation = await this.validateDataContract(transactionId, userAddress);
       if (!validation.isValid) {
-        throw new ValidationError(validation.reason || '데이터 계약 검증에 실패했습니다.');
+        throw new ValidationError(validation.reason || 'Data contract validation failed.');
       }
 
-      // 일반 다운로드 진행
+      // Proceed with normal download
       return await this.downloadFile({ transactionId, outputPath });
     } catch (error: any) {
       if (error instanceof ValidationError) {
         throw error;
       }
-      throw new NetworkError(`조건부 접근 파일 다운로드에 실패했습니다: ${error.message}`);
+      throw new NetworkError(`Conditional access file download failed: ${error.message}`);
     }
   }
 
@@ -1093,15 +1095,15 @@ export class IrysService {
     
     try {
       if (!this.irys) {
-        throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+        throw new NetworkError('Irys SDK not initialized.');
       }
 
-      // 존재하지 않는 파일인지 확인 (테스트용)
+      // Check if file exists (for testing)
       if (transactionId === 'nonexistent-transaction-id') {
-        throw new FileNotFoundError('파일을 찾을 수 없습니다.');
+        throw new FileNotFoundError('File not found.');
       }
 
-      // 실제 삭제는 불가능하므로 삭제 태그를 추가하는 트랜잭션 생성
+      // Actual deletion is not possible, so create a transaction to mark for deletion
       const deleteTags = [
         { name: 'Deleted', value: 'true' },
         { name: 'Deleted-At', value: Date.now().toString() },
@@ -1109,7 +1111,7 @@ export class IrysService {
         { name: 'Deleted-By', value: this.irys.address }
       ];
 
-      // 빈 데이터로 삭제 표시 트랜잭션 생성
+      // Create an empty data transaction to mark for deletion
       const emptyData = Buffer.from('');
       const receipt = await this.irys.upload(emptyData, { tags: deleteTags });
 
@@ -1117,12 +1119,12 @@ export class IrysService {
         transactionId,
         deleted: true,
         permanent,
-        message: permanent ? '파일이 영구적으로 삭제 표시되었습니다.' : '파일이 삭제 표시되었습니다.',
+        message: permanent ? 'File marked for permanent deletion.' : 'File marked for deletion.',
         timestamp: Date.now()
       };
     } catch (error: any) {
-      console.error('파일 삭제 중 오류 발생:', error);
-      throw new IrysError(`파일 삭제에 실패했습니다: ${error.message}`);
+      console.error('Error during file deletion:', error);
+      throw new IrysError(`File deletion failed: ${error.message}`);
     }
   }
 
@@ -1174,8 +1176,8 @@ export class IrysService {
         }
       };
     } catch (error: any) {
-      console.error('배치 다운로드 중 오류 발생:', error);
-      throw new NetworkError(`배치 다운로드에 실패했습니다: ${error.message}`);
+      console.error('Error during batch download:', error);
+      throw new NetworkError(`Batch download failed: ${error.message}`);
     }
   }
 
@@ -1184,10 +1186,10 @@ export class IrysService {
     const { transactionId, targetVersion, createBackup } = request;
     
     try {
-      // 현재 파일 정보 조회
+      // Get current file info
       const currentInfo = await this.getFileInfo(transactionId);
       
-      // 백업 생성 (필요시)
+      // Create backup (if needed)
       let backupTransactionId: string | undefined;
       if (createBackup) {
         const backupTags = [
@@ -1223,7 +1225,7 @@ export class IrysService {
         backupTransactionId = backupResponse.transactionId;
       }
 
-      // 롤백 버전 생성
+      // Create rollback version
       const rollbackTags = [
         { name: 'Rollback-To', value: targetVersion },
         { name: 'Original-Transaction', value: transactionId },
@@ -1273,10 +1275,10 @@ export class IrysService {
     const { transactionId, userAddress, revokeAll } = request;
     
     try {
-      // 현재 공유 설정 조회
+      // Get current share settings
       const fileInfo = await this.getFileInfo(transactionId);
       
-      // 공유 해제 태그 생성
+      // Generate revoke tags
       const revokeTags = [
         { name: 'Share-Revoked', value: 'true' },
         { name: 'Revoked-At', value: Date.now().toString() }
@@ -1290,7 +1292,7 @@ export class IrysService {
         revokeTags.push({ name: 'Revoke-All', value: 'true' });
       }
 
-      // 공유 해제 트랜잭션 생성
+      // Create revoke transaction
       const emptyData = Buffer.from('');
       await this.irys!.upload(emptyData, { tags: revokeTags });
 
@@ -1314,10 +1316,10 @@ export class IrysService {
     const { tokenType, privateKey } = request;
     
     try {
-      const previousTokenType = 'ethereum'; // 현재는 고정
+      const previousTokenType = 'ethereum'; // Currently fixed
       const newPrivateKey = privateKey || this.privateKey;
 
-      // 새로운 Irys 인스턴스 생성
+      // Create new Irys instance
       this.irys = new Irys({
         url: this.gatewayUrl,
         token: tokenType,
@@ -1326,7 +1328,7 @@ export class IrysService {
 
       this.privateKey = newPrivateKey;
 
-      // 잔액 조회
+      // Get balance
       const balance = await this.getBalance();
 
       return {
@@ -1335,11 +1337,11 @@ export class IrysService {
         success: true,
         balance,
         currency: tokenType === 'arweave' ? 'AR' : 'ETH',
-        message: `토큰 타입이 ${previousTokenType}에서 ${tokenType}로 변경되었습니다.`
+        message: `Token type changed from ${previousTokenType} to ${tokenType}.`
       };
     } catch (error: any) {
-      console.error('토큰 타입 전환 중 오류 발생:', error);
-      throw new IrysError(`토큰 타입 전환에 실패했습니다: ${error.message}`);
+      console.error('Error during token type switch:', error);
+      throw new IrysError(`Token type switch failed: ${error.message}`);
     }
   }
 
@@ -1352,12 +1354,12 @@ export class IrysService {
       const path = require('path');
 
       if (!fs.existsSync(directoryPath)) {
-        throw new FileNotFoundError(`디렉토리를 찾을 수 없습니다: ${directoryPath}`);
+        throw new FileNotFoundError(`Directory not found: ${directoryPath}`);
       }
 
       const files: string[] = [];
       
-      // 디렉토리 재귀 스캔
+      // Recursively scan directory
       const scanDirectory = (dir: string, baseDir: string) => {
         const items = fs.readdirSync(dir);
         
@@ -1367,7 +1369,7 @@ export class IrysService {
           const fullPath = path.join(dir, item);
           const relativePath = path.relative(baseDir, fullPath);
           
-          // 제외 패턴 확인
+          // Check exclude patterns
           if (excludePatterns && excludePatterns.some(pattern => 
             relativePath.includes(pattern) || item.includes(pattern)
           )) {
@@ -1445,8 +1447,8 @@ export class IrysService {
         }
       };
     } catch (error: any) {
-      console.error('디렉토리 업로드 중 오류 발생:', error);
-      throw new IrysError(`디렉토리 업로드에 실패했습니다: ${error.message}`);
+      console.error('Error during directory upload:', error);
+      throw new IrysError(`Directory upload failed: ${error.message}`);
     }
   }
 
@@ -1456,9 +1458,9 @@ export class IrysService {
     
     try {
       if (action === 'create' && categoryName) {
-        // 카테고리 생성: Irys에 카테고리 메타데이터 업로드
+        // Create category: Upload category metadata to Irys
         if (!this.irys) {
-          throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+          throw new NetworkError('Irys SDK not initialized.');
         }
 
         const categoryMetadata = {
@@ -1486,21 +1488,21 @@ export class IrysService {
           categories: [],
           action,
           success: true,
-          message: `카테고리 '${categoryName}'이(가) 생성되었습니다.`,
+          message: `Category '${categoryName}' created.`,
           transactionId: receipt.id
         };
       } else if (action === 'list') {
-        // 카테고리 목록 조회: 로컬 데이터 사용 (GraphQL 쿼리 실패 시 대체)
+        // Get category list: Use local data (fallback for GraphQL query)
         try {
           if (!this.irys) {
-            throw new NetworkError('Irys SDK가 초기화되지 않았습니다.');
+            throw new NetworkError('Irys SDK not initialized.');
           }
 
-          // 시뮬레이션된 카테고리 데이터 반환
+          // Return simulated category data
           const mockCategories = [
             {
               name: 'documents',
-              description: '문서 파일들',
+              description: 'Document files',
               color: '#2196F3',
               parentCategory: undefined,
               fileCount: 15,
@@ -1508,7 +1510,7 @@ export class IrysService {
             },
             {
               name: 'images',
-              description: '이미지 파일들',
+              description: 'Image files',
               color: '#4CAF50',
               parentCategory: undefined,
               fileCount: 23,
@@ -1516,7 +1518,7 @@ export class IrysService {
             },
             {
               name: 'videos',
-              description: '비디오 파일들',
+              description: 'Video files',
               color: '#FF9800',
               parentCategory: undefined,
               fileCount: 8,
@@ -1524,7 +1526,7 @@ export class IrysService {
             },
             {
               name: 'backup',
-              description: '백업 파일들',
+              description: 'Backup files',
               color: '#9C27B0',
               parentCategory: undefined,
               fileCount: 5,
@@ -1536,19 +1538,19 @@ export class IrysService {
             categories: mockCategories,
             action,
             success: true,
-            message: '카테고리 목록을 성공적으로 조회했습니다.',
+            message: 'Category list retrieved successfully.',
             transactionId: undefined
           };
 
         } catch (error: any) {
-          console.error('카테고리 목록 조회 실패:', error);
+          console.error('Category list retrieval failed:', error);
           
-          // 에러 발생 시 빈 카테고리 목록 반환
+          // Return empty category list on error
           return {
             categories: [],
             action,
             success: false,
-            message: `카테고리 목록 조회 실패: ${error.message}`,
+            message: `Category list retrieval failed: ${error.message}`,
             transactionId: undefined
           };
         }
@@ -1558,11 +1560,11 @@ export class IrysService {
         categories: [],
         action,
         success: false,
-        message: `지원하지 않는 카테고리 액션: ${action}`
+        message: `Unsupported category action: ${action}`
       };
     } catch (error: any) {
-      console.error('카테고리 관리 중 오류 발생:', error);
-      throw new IrysError(`카테고리 관리에 실패했습니다: ${error.message}`);
+      console.error('Error during category management:', error);
+      throw new IrysError(`Category management failed: ${error.message}`);
     }
   }
 
@@ -1571,26 +1573,26 @@ export class IrysService {
     const { action, tagName, tagValue, description, category } = request;
     
     try {
-      // 시뮬레이션: 실제로는 태그 정보를 Irys에서 조회
+      // Simulation: In a real implementation, you would query tags from Irys
       const tags = [
         {
           name: 'Content-Type',
           value: 'text/plain',
-          description: '텍스트 파일',
+          description: 'Text file',
           category: 'documents',
           usageCount: 15
         },
         {
           name: 'Content-Type',
           value: 'image/png',
-          description: 'PNG 이미지',
+          description: 'PNG image',
           category: 'images',
           usageCount: 8
         },
         {
           name: 'Priority',
           value: 'high',
-          description: '높은 우선순위',
+          description: 'High priority',
           category: undefined,
           usageCount: 5
         }
@@ -1610,11 +1612,11 @@ export class IrysService {
         tags,
         action,
         success: true,
-        message: `태그 ${action} 작업이 완료되었습니다.`
+        message: `Tag ${action} operation completed.`
       };
     } catch (error: any) {
-      console.error('태그 관리 중 오류 발생:', error);
-      throw new IrysError(`태그 관리에 실패했습니다: ${error.message}`);
+      console.error('Error during tag management:', error);
+      throw new IrysError(`Tag management failed: ${error.message}`);
     }
   }
 
@@ -1623,7 +1625,7 @@ export class IrysService {
     const { operation, fileSize, concurrent, duration } = request;
     
     try {
-      // 시뮬레이션: 실제로는 성능 메트릭을 수집
+      // Simulation: In a real implementation, you would collect performance metrics
       const metrics = {
         duration: duration || Math.random() * 5000 + 1000,
         throughput: fileSize ? (fileSize / (duration || 1000)) * 1000 : Math.random() * 1024 * 1024,
@@ -1635,11 +1637,11 @@ export class IrysService {
       const recommendations = [];
       
       if (metrics.latency > 500) {
-        recommendations.push('네트워크 지연이 높습니다. 다른 게이트웨이를 시도해보세요.');
+        recommendations.push('Network latency is high. Try another gateway.');
       }
       
       if (metrics.throughput < 1024 * 1024) {
-        recommendations.push('처리량이 낮습니다. 파일 크기를 줄이거나 배치 처리를 고려하세요.');
+        recommendations.push('Throughput is low. Consider reducing file size or batch processing.');
       }
 
       return {
@@ -1649,8 +1651,8 @@ export class IrysService {
         timestamp: Date.now()
       };
     } catch (error: any) {
-      console.error('성능 모니터링 중 오류 발생:', error);
-      throw new IrysError(`성능 모니터링에 실패했습니다: ${error.message}`);
+      console.error('Error during performance monitoring:', error);
+      throw new IrysError(`Performance monitoring failed: ${error.message}`);
     }
   }
 
@@ -1659,13 +1661,13 @@ export class IrysService {
     const { action, pluginName, pluginUrl, version } = request;
     
     try {
-      // 시뮬레이션: 실제로는 플러그인 정보를 관리
+      // Simulation: In a real implementation, you would manage plugin information
       const plugins = [
         {
           name: 'csv-processor',
           version: '1.0.0',
           enabled: true,
-          description: 'CSV 파일 처리 플러그인',
+          description: 'CSV file processing plugin',
           author: 'Irys Team',
           dependencies: ['@irys/sdk']
         },
@@ -1673,7 +1675,7 @@ export class IrysService {
           name: 'image-optimizer',
           version: '0.5.0',
           enabled: false,
-          description: '이미지 최적화 플러그인',
+          description: 'Image optimization plugin',
           author: 'Community',
           dependencies: ['sharp', '@irys/sdk']
         }
@@ -1694,11 +1696,11 @@ export class IrysService {
         plugins,
         action,
         success: true,
-        message: `플러그인 ${action} 작업이 완료되었습니다.`
+        message: `Plugin ${action} operation completed.`
       };
     } catch (error: any) {
-      console.error('플러그인 관리 중 오류 발생:', error);
-      throw new IrysError(`플러그인 관리에 실패했습니다: ${error.message}`);
+      console.error('Error during plugin management:', error);
+      throw new IrysError(`Plugin management failed: ${error.message}`);
     }
   }
 
@@ -1707,10 +1709,10 @@ export class IrysService {
     const { startDate, endDate, owner, category, includeDeleted, groupBy } = request;
     
     try {
-      // 기본 통계 조회
+      // Basic statistics query
       const basicStats = await this.getStats({ startDate, endDate, owner });
 
-      // 시뮬레이션: 고급 통계 데이터
+      // Simulation: Advanced statistics data
       const timeSeries = [
         {
           period: '2024-01',
@@ -1766,8 +1768,8 @@ export class IrysService {
         storageEfficiency
       };
     } catch (error: any) {
-      console.error('고급 통계 조회 중 오류 발생:', error);
-      throw new IrysError(`고급 통계 조회에 실패했습니다: ${error.message}`);
+      console.error('Error during advanced statistics retrieval:', error);
+      throw new IrysError(`Advanced statistics retrieval failed: ${error.message}`);
     }
   }
 
@@ -1776,24 +1778,24 @@ export class IrysService {
     const { transactionId, restoreToPath, overwrite } = request;
     
     try {
-      // 삭제된 파일인지 확인
+      // Check if file was deleted
       const fileInfo = await this.getFileInfo(transactionId);
       
-      // 테스트용 transaction ID의 경우 삭제된 것으로 시뮬레이션
+      // Simulate deletion for test transaction IDs
       if (transactionId.startsWith('test-') || transactionId.startsWith('tx-')) {
-        // 테스트용으로는 삭제된 것으로 간주
+        // For test purposes, consider it deleted
       } else if (fileInfo.tags?.['Deleted'] !== 'true') {
-        throw new ValidationError('이 파일은 삭제되지 않았습니다.');
+        throw new ValidationError('This file was not deleted.');
       }
 
-      // 복구 태그 생성
+      // Generate restore tags
       const restoreTags = [
         { name: 'Restored', value: 'true' },
         { name: 'Restored-At', value: Date.now().toString() },
         { name: 'Restored-By', value: this.irys!.address }
       ];
 
-      // 복구 트랜잭션 생성
+      // Create restore transaction
       const emptyData = Buffer.from('');
       await this.irys!.upload(emptyData, { tags: restoreTags });
 
@@ -1801,12 +1803,12 @@ export class IrysService {
         transactionId,
         restored: true,
         restoreToPath,
-        message: '파일이 성공적으로 복구되었습니다.',
+        message: 'File restored successfully.',
         timestamp: Date.now()
       };
     } catch (error: any) {
-      console.error('파일 복구 중 오류 발생:', error);
-      throw new IrysError(`파일 복구에 실패했습니다: ${error.message}`);
+      console.error('Error during file restoration:', error);
+      throw new IrysError(`File restoration failed: ${error.message}`);
     }
   }
 } 

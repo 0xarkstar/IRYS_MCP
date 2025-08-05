@@ -325,7 +325,7 @@ export class IrysMCPServer {
           encryptedPath: finalOutputPath,
           salt: salt.toString('hex'),
           iv: iv.toString('hex'),
-          message: '파일이 성공적으로 암호화되었습니다.',
+          message: 'File encrypted successfully.',
         };
       },
     });
@@ -364,7 +364,7 @@ export class IrysMCPServer {
         return {
           encryptedPath: encryptedFilePath,
           decryptedPath: finalOutputPath,
-          message: '파일이 성공적으로 복호화되었습니다.',
+          message: 'File decrypted successfully.',
         };
       },
     });

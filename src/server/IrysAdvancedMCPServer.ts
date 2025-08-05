@@ -27,10 +27,10 @@ export class IrysAdvancedMCPServer {
   }
 
   private registerAdvancedTools(): void {
-    // 🚀 고급 번들링 기능
+    // 🚀 Advanced bundling functionality
     this.registerTool({
       name: 'irys_create_bundle',
-      description: '여러 파일을 하나의 번들로 묶어서 Irys 네트워크에 업로드합니다. 트랜잭션 비용을 절약하고 관련 파일들을 그룹화할 수 있습니다.',
+      description: 'Bundles multiple files into a single Irys network upload. Saves transaction costs and groups related files.',
       inputSchema: z.object({
         files: z.array(z.object({
           filePath: z.string(),
@@ -51,10 +51,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 🔍 고급 쿼리 기능
+    // 🔍 Advanced query functionality
     this.registerTool({
       name: 'irys_advanced_query',
-      description: 'Irys 네트워크에서 고급 검색을 수행합니다. 블록 범위, 정렬 옵션, 복잡한 태그 필터링을 지원합니다.',
+      description: 'Performs advanced searches on the Irys network. Supports block range, sorting options, and complex tag filtering.',
       inputSchema: z.object({
         owner: z.string().optional(),
         tags: z.record(z.string()).optional(),
@@ -83,10 +83,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 📊 Arweave GraphQL 쿼리
+    // 📊 Arweave GraphQL query
     this.registerTool({
       name: 'irys_arweave_query',
-      description: 'Arweave 블록체인에 직접 GraphQL 쿼리를 실행합니다. 복잡한 블록체인 데이터 분석이 가능합니다.',
+      description: 'Executes a direct GraphQL query on the Arweave blockchain. Enables complex blockchain data analysis.',
       inputSchema: z.object({
         query: z.string(),
         variables: z.record(z.any()).optional(),
@@ -100,10 +100,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 📈 CSV 구조화 업로드
+    // 📈 CSV structured upload
     this.registerTool({
       name: 'irys_upload_csv_structured',
-      description: 'CSV 파일을 구조화된 JSON 형태로 변환하여 업로드합니다. 메타데이터와 함께 검색 가능한 형태로 저장됩니다.',
+      description: 'Converts a CSV file into a structured JSON format for upload. Saves metadata and makes it searchable.',
       inputSchema: z.object({
         filePath: z.string(),
         delimiter: z.string().optional().default(','),
@@ -123,10 +123,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 📥 CSV 구조화 다운로드
+    // 📥 CSV structured download
     this.registerTool({
       name: 'irys_download_csv_structured',
-      description: '구조화된 CSV 데이터를 다시 CSV 형태로 변환하여 다운로드합니다.',
+      description: 'Converts structured CSV data back to CSV format for download.',
       inputSchema: z.object({
         transactionId: z.string(),
         outputPath: z.string().optional(),
@@ -147,10 +147,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 🗂️ 디렉토리 전체 업로드
+    // 🗂️ Directory upload
     this.registerTool({
       name: 'irys_upload_directory',
-      description: '디렉토리 전체를 재귀적으로 스캔하여 모든 파일을 Irys 네트워크에 업로드합니다. 상대 경로 정보가 보존됩니다.',
+      description: 'Recursively scans a directory and uploads all files to the Irys network. Preserves relative path information.',
       inputSchema: z.object({
         dirPath: z.string(),
         tags: z.record(z.string()).optional(),
@@ -174,10 +174,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 🔢 정밀 잔액 조회
+    // 🔢 Precise balance check
     this.registerTool({
       name: 'irys_get_precise_balance',
-      description: 'BigNumber를 사용하여 정밀한 잔액을 조회합니다. 18자리 소수점까지 정확한 잔액을 확인할 수 있습니다.',
+      description: 'Checks for precise balance using BigNumber. Can accurately check for balances up to 18 decimal places.',
       inputSchema: z.object({}),
       outputSchema: z.object({
         balance: z.any(), // BigNumber
@@ -189,10 +189,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 🔄 토큰 타입 변경
+    // 🔄 Token type change
     this.registerTool({
       name: 'irys_switch_token_type',
-      description: 'Irys 서비스에서 사용하는 토큰 타입을 변경합니다. Ethereum, Solana, Aptos, Arweave 중 선택할 수 있습니다.',
+      description: 'Changes the token type used by the Irys service. Can choose between Ethereum, Solana, Aptos, Arweave.',
       inputSchema: z.object({
         tokenType: z.enum(['ethereum', 'solana', 'aptos', 'arweave']),
       }),
@@ -209,15 +209,15 @@ export class IrysAdvancedMCPServer {
           success: true,
           previousTokenType: previousType,
           newTokenType: request.tokenType,
-          message: `토큰 타입이 ${previousType}에서 ${request.tokenType}로 변경되었습니다.`,
+          message: `Token type changed from ${previousType} to ${request.tokenType}.`,
         };
       },
     });
 
-    // 📊 고급 통계 조회
+    // 📊 Advanced stats query
     this.registerTool({
       name: 'irys_get_advanced_stats',
-      description: 'BigNumber를 사용한 정밀한 통계 정보를 조회합니다. 평균 파일 크기, 스토리지 비용 추정 등을 포함합니다.',
+      description: 'Queries for precise statistical information using BigNumber. Includes average file size, storage cost estimates, etc.',
       inputSchema: z.object({
         startDate: z.number().optional(),
         endDate: z.number().optional(),
@@ -243,10 +243,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 🔐 멀티 토큰 지원 업로드
+    // 🔐 Multi-token support upload
     this.registerTool({
       name: 'irys_multi_token_upload',
-      description: '현재 설정된 토큰 타입에 따라 적절한 업로드 클라이언트를 사용하여 파일을 업로드합니다.',
+      description: 'Uses the appropriate upload client based on the currently set token type to upload files.',
       inputSchema: z.object({
         filePath: z.string(),
         tags: z.record(z.string()).optional(),
@@ -265,10 +265,10 @@ export class IrysAdvancedMCPServer {
         tokenType: z.string(),
       }),
       handler: async (request: any) => {
-        // 토큰 타입에 따른 적절한 업로드 클라이언트 사용
+        // Use appropriate upload client based on token type
         const tokenType = (this.advancedService as any).tokenType;
         
-        // 시뮬레이션: 멀티 토큰 업로드
+        // Simulation: Multi-token upload
         return {
           transactionId: `multi-token-tx-${Date.now()}`,
           url: `https://uploader.irys.xyz/multi-token-tx-${Date.now()}`,
@@ -281,10 +281,10 @@ export class IrysAdvancedMCPServer {
       },
     });
 
-    // 📋 번들 정보 조회
+    // 📋 Bundle info query
     this.registerTool({
       name: 'irys_get_bundle_info',
-      description: '번들 ID를 기반으로 번들에 포함된 파일들의 정보를 조회합니다.',
+      description: 'Queries information about files included in a bundle based on the bundle ID.',
       inputSchema: z.object({
         bundleId: z.string(),
       }),
@@ -304,8 +304,8 @@ export class IrysAdvancedMCPServer {
         })),
       }),
       handler: async (request: { bundleId: string }) => {
-        // 실제 구현에서는 번들 정보를 조회
-        // 여기서는 시뮬레이션
+        // In a real implementation, bundle info would be queried
+        // Here is a simulation
         return {
           bundleId: request.bundleId,
           bundleName: 'Sample Bundle',
@@ -342,20 +342,20 @@ export class IrysAdvancedMCPServer {
   }
 
   async start(): Promise<void> {
-    console.log('🚀 Irys 고급 MCP 서버를 시작합니다...');
-    console.log(`💰 현재 토큰 타입: ${(this.advancedService as any).tokenType}`);
+    console.log('🚀 Starting Irys Advanced MCP server...');
+    console.log(`💰 Current token type: ${(this.advancedService as any).tokenType}`);
     
     try {
       const balance = await this.advancedService.getPreciseBalance();
-      console.log(`💰 정밀 잔액: ${balance.formatted} ${balance.currency}`);
+      console.log(`💰 Precise balance: ${balance.formatted} ${balance.currency}`);
     } catch (error) {
-      console.warn('⚠️  잔액 조회에 실패했습니다.');
+      console.warn('⚠️ Failed to get balance.');
     }
 
-    console.log('✅ Irys 고급 MCP 서버가 준비되었습니다.');
+    console.log('✅ Irys Advanced MCP server is ready.');
   }
 
   async stop(): Promise<void> {
-    console.log('🛑 Irys 고급 MCP 서버를 종료합니다...');
+    console.log('🛑 Stopping Irys Advanced MCP server...');
   }
 } 

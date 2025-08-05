@@ -1,66 +1,66 @@
 import { IrysService } from '../src/services/IrysService';
 import { randomBytes } from 'crypto';
 
-// 실제 Irys L1 테스트넷과의 상호작용을 테스트하는 파일
-describe('Irys L1 메인넷 실제 연결 테스트', () => {
+// File for testing actual interaction with Irys L1 mainnet
+describe('Irys L1 Mainnet Actual Connection Tests', () => {
   let irysService: IrysService;
   let privateKey: string;
 
-  // 실제 테스트용 개인키 생성
+  // Generate real test private key
   function generateRealPrivateKey(): string {
     return randomBytes(32).toString('hex');
   }
 
   beforeAll(() => {
-    // 실제 테스트용 개인키 생성 (매번 새로운 키)
+    // Generate real test private key (new key each time)
     privateKey = generateRealPrivateKey();
-    console.log('🔑 실제 테스트용 개인키 생성됨 (64자 hex)');
+    console.log('🔑 Real test private key generated (64-character hex)');
     
-    // Irys L1 메인넷 URL 설정
+    // Set Irys L1 mainnet URL
     const gatewayUrl = process.env.IRYS_GATEWAY_URL || 'https://uploader.irys.xyz';
     console.log(`🌐 Gateway URL: ${gatewayUrl}`);
     
-    // Irys L1 메인넷 서비스 인스턴스 생성
+    // Create Irys L1 mainnet service instance
     irysService = new IrysService(privateKey, gatewayUrl, 'mainnet');
   });
 
-  test('Irys L1 메인넷 SDK 초기화 및 연결 테스트', async () => {
-    console.log('🧪 Irys L1 메인넷 SDK 초기화 테스트 시작...');
+  test('Irys L1 Mainnet SDK initialization and connection test', async () => {
+    console.log('🧪 Irys L1 Mainnet SDK initialization test started...');
     
-    // 연결 상태 확인
+    // Check connection status
     const isConnected = await irysService.checkConnection();
     expect(isConnected).toBe(true);
     
-    console.log('✅ Irys L1 메인넷 SDK 초기화 및 연결 성공');
+    console.log('✅ Irys L1 Mainnet SDK initialization and connection successful');
   });
 
-  test('Irys L1 메인넷 잔액 조회 테스트', async () => {
-    console.log('🧪 Irys L1 메인넷 잔액 조회 테스트 시작...');
+  test('Irys L1 Mainnet balance retrieval test', async () => {
+    console.log('🧪 Irys L1 Mainnet balance retrieval test started...');
     
     try {
       const balance = await irysService.getBalance();
-      console.log(`💰 잔액: ${balance}`);
+      console.log(`💰 Balance: ${balance}`);
       expect(typeof balance).toBe('string');
       expect(balance.length).toBeGreaterThan(0);
-      console.log('✅ Irys L1 메인넷 잔액 조회 성공');
+      console.log('✅ Irys L1 Mainnet balance retrieval successful');
     } catch (error) {
-      console.warn('⚠️ 잔액 조회 실패 (테스트 계속 진행):', error);
-      // 잔액 조회 실패는 테스트 실패로 간주하지 않음
+      console.warn('⚠️ Balance retrieval failed (test continues):', error);
+      // Balance retrieval failure is not considered a test failure
     }
   });
 
-  test('Irys L1 메인넷 파일 업로드 테스트', async () => {
-    console.log('🧪 Irys L1 메인넷 파일 업로드 테스트 시작...');
+  test('Irys L1 Mainnet file upload test', async () => {
+    console.log('🧪 Irys L1 Mainnet file upload test started...');
     
-    const testContent = 'Irys L1 메인넷 파일 업로드 테스트 - ' + Date.now();
+    const testContent = 'Irys L1 Mainnet file upload test - ' + Date.now();
     const testFilePath = './test-upload.txt';
     
     try {
-      // 테스트 파일 생성
+      // Create test file
       const fs = require('fs');
       fs.writeFileSync(testFilePath, testContent, 'utf8');
       
-      // 파일 업로드
+      // Upload file
       const uploadResult = await irysService.uploadFile({
         filePath: testFilePath,
         isPublic: true,
@@ -71,33 +71,33 @@ describe('Irys L1 메인넷 실제 연결 테스트', () => {
         }
       });
       
-      console.log('📤 업로드 결과:', uploadResult);
+      console.log('📤 Upload result:', uploadResult);
       expect(uploadResult.transactionId).toBeDefined();
       expect(uploadResult.transactionId.length).toBeGreaterThan(0);
       expect(uploadResult.url).toBeDefined();
       
-      console.log('✅ Irys L1 메인넷 파일 업로드 성공');
+      console.log('✅ Irys L1 Mainnet file upload successful');
       
-      // 테스트 파일 정리
+      // Clean up test file
       fs.unlinkSync(testFilePath);
       
     } catch (error) {
-      console.error('❌ 파일 업로드 실패:', error);
-      // 테스트 파일 정리
+      console.error('❌ File upload failed:', error);
+      // Clean up test file
       try {
         const fs = require('fs');
         if (fs.existsSync(testFilePath)) {
           fs.unlinkSync(testFilePath);
         }
       } catch (cleanupError) {
-        console.warn('⚠️ 테스트 파일 정리 실패:', cleanupError);
+        console.warn('⚠️ Test file cleanup failed:', cleanupError);
       }
       throw error;
     }
   });
 
-  test('Irys L1 메인넷 파일 검색 테스트', async () => {
-    console.log('🧪 Irys L1 메인넷 파일 검색 테스트 시작...');
+  test('Irys L1 Mainnet file search test', async () => {
+    console.log('🧪 Irys L1 Mainnet file search test started...');
     
     try {
       const searchResult = await irysService.searchFiles({
@@ -106,42 +106,42 @@ describe('Irys L1 메인넷 실제 연결 테스트', () => {
         offset: 0
       });
       
-      console.log('🔍 검색 결과:', searchResult);
+      console.log('🔍 Search result:', searchResult);
       expect(searchResult.files).toBeDefined();
       expect(Array.isArray(searchResult.files)).toBe(true);
       
-      console.log('✅ Irys L1 메인넷 파일 검색 성공');
+      console.log('✅ Irys L1 Mainnet file search successful');
       
     } catch (error) {
-      console.error('❌ 파일 검색 실패:', error);
+      console.error('❌ File search failed:', error);
       throw error;
     }
   });
 
-  test('Irys L1 메인넷 통계 조회 테스트', async () => {
-    console.log('🧪 Irys L1 메인넷 통계 조회 테스트 시작...');
+  test('Irys L1 Mainnet statistics retrieval test', async () => {
+    console.log('🧪 Irys L1 Mainnet statistics retrieval test started...');
     
     try {
       const statsResult = await irysService.getStats({
-        startDate: Date.now() - 24 * 60 * 60 * 1000, // 24시간 전
+        startDate: Date.now() - 24 * 60 * 60 * 1000, // 24 hours ago
         endDate: Date.now()
       });
       
-      console.log('📊 통계 결과:', statsResult);
+      console.log('📊 Statistics result:', statsResult);
       expect(statsResult.totalFiles).toBeDefined();
       expect(statsResult.totalSize).toBeDefined();
       expect(statsResult.categories).toBeDefined();
       
-      console.log('✅ Irys L1 메인넷 통계 조회 성공');
+      console.log('✅ Irys L1 Mainnet statistics retrieval successful');
       
     } catch (error) {
-      console.error('❌ 통계 조회 실패:', error);
+      console.error('❌ Statistics retrieval failed:', error);
       throw error;
     }
   });
 
-  test('Irys L1 메인넷 네트워크 정보 확인', () => {
-    console.log('🧪 Irys L1 메인넷 네트워크 정보 확인...');
+  test('Irys L1 Mainnet network information verification', () => {
+    console.log('🧪 Irys L1 Mainnet network information verification...');
     
     const networkType = irysService.getNetworkType();
     const gatewayUrl = irysService.getGatewayUrl();
@@ -149,12 +149,12 @@ describe('Irys L1 메인넷 실제 연결 테스트', () => {
     expect(networkType).toBe('mainnet');
     expect(gatewayUrl).toContain('uploader.irys.xyz');
     
-    console.log(`🌍 네트워크 타입: ${networkType}`);
+    console.log(`🌍 Network type: ${networkType}`);
     console.log(`🌐 Gateway URL: ${gatewayUrl}`);
-    console.log('✅ Irys L1 메인넷 네트워크 정보 확인 완료');
+    console.log('✅ Irys L1 Mainnet network information verification completed');
   });
 
   afterAll(() => {
-    console.log('🧹 Irys L1 메인넷 테스트 정리 완료');
+    console.log('🧹 Irys L1 Mainnet test cleanup completed');
   });
 }); 

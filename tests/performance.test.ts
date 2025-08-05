@@ -5,15 +5,15 @@ import { writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
 
-// 테스트용 개인키 생성 (32바이트)
+// Generate test private key (32 bytes)
 const generateTestPrivateKey = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-// 환경변수 로드
+// Load environment variables
 config();
 
-describe('Irys MCP 성능 테스트', () => {
+describe('Irys MCP Performance Tests', () => {
   let mcpServer: IrysMCPServer;
   let advancedMcpServer: IrysAdvancedMCPServer;
   const privateKey = process.env.IRYS_PRIVATE_KEY || generateTestPrivateKey();
@@ -25,7 +25,7 @@ describe('Irys MCP 성능 테스트', () => {
   });
 
   afterAll(() => {
-    // 테스트 파일들 정리
+    // Clean up test files
     testFiles.forEach(filePath => {
       if (existsSync(filePath)) {
         unlinkSync(filePath);
@@ -33,8 +33,8 @@ describe('Irys MCP 성능 테스트', () => {
     });
   });
 
-  describe('연결 성능 테스트', () => {
-    test('연결 확인 응답 시간 측정', async () => {
+  describe('Connection Performance Tests', () => {
+    test('Connection check response time measurement', async () => {
       const startTime = Date.now();
       
       const isConnected = await mcpServer.irysService.checkConnection();
@@ -43,12 +43,12 @@ describe('Irys MCP 성능 테스트', () => {
       const responseTime = endTime - startTime;
       
       expect(isConnected).toBe(true);
-      expect(responseTime).toBeLessThan(10000); // 10초 이내 응답
+      expect(responseTime).toBeLessThan(10000); // Response within 10 seconds
       
-      console.log(`🔗 연결 확인 응답 시간: ${responseTime}ms`);
+      console.log(`🔗 Connection check response time: ${responseTime}ms`);
     }, 15000);
 
-    test('잔액 조회 응답 시간 측정', async () => {
+    test('Balance retrieval response time measurement', async () => {
       const startTime = Date.now();
       
       const balance = await mcpServer.irysService.getBalance();
@@ -57,14 +57,14 @@ describe('Irys MCP 성능 테스트', () => {
       const responseTime = endTime - startTime;
       
       expect(typeof balance).toBe('string');
-      expect(responseTime).toBeLessThan(10000); // 10초 이내 응답
+      expect(responseTime).toBeLessThan(10000); // Response within 10 seconds
       
-      console.log(`💰 잔액 조회 응답 시간: ${responseTime}ms`);
+      console.log(`💰 Balance retrieval response time: ${responseTime}ms`);
     }, 15000);
   });
 
-  describe('파일 업로드 성능 테스트', () => {
-    test('작은 파일 업로드 성능 (1KB)', async () => {
+  describe('File Upload Performance Tests', () => {
+    test('Small file upload performance (1KB)', async () => {
       const filePath = join(__dirname, 'small-test-file.txt');
       const content = 'A'.repeat(1024); // 1KB
       writeFileSync(filePath, content, 'utf8');
@@ -72,26 +72,26 @@ describe('Irys MCP 성능 테스트', () => {
 
       const startTime = Date.now();
       
-                    const uploadResult = await mcpServer.irysService.uploadFile({
-                filePath,
-                isPublic: true,
-                tags: {
-                  'Content-Type': 'text/plain',
-                  'Test-Type': 'performance-small'
-                }
-              });
+      const uploadResult = await mcpServer.irysService.uploadFile({
+        filePath,
+        isPublic: true,
+        tags: {
+          'Content-Type': 'text/plain',
+          'Test-Type': 'performance-small'
+        }
+      });
       
       const endTime = Date.now();
       const uploadTime = endTime - startTime;
       
       expect(uploadResult).toHaveProperty('transactionId');
       expect(uploadResult.size).toBe(1024);
-      expect(uploadTime).toBeLessThan(30000); // 30초 이내 업로드
+      expect(uploadTime).toBeLessThan(30000); // Upload within 30 seconds
       
-      console.log(`📤 1KB 파일 업로드 시간: ${uploadTime}ms`);
+      console.log(`📤 1KB file upload time: ${uploadTime}ms`);
     }, 40000);
 
-        test('중간 파일 업로드 성능 (100KB)', async () => {
+    test('Medium file upload performance (100KB)', async () => {
       const filePath = join(__dirname, 'medium-test-file.txt');
       const content = 'B'.repeat(102400); // 100KB
       writeFileSync(filePath, content, 'utf8');
@@ -114,12 +114,12 @@ describe('Irys MCP 성능 테스트', () => {
         
         expect(uploadResult).toHaveProperty('transactionId');
         expect(uploadResult.size).toBe(102400);
-        expect(uploadTime).toBeLessThan(60000); // 60초 이내 업로드
+        expect(uploadTime).toBeLessThan(60000); // Upload within 60 seconds
         
-        console.log(`📤 100KB 파일 업로드 시간: ${uploadTime}ms`);
+        console.log(`📤 100KB file upload time: ${uploadTime}ms`);
       } catch (error: any) {
         if (error.message.includes('Not enough balance')) {
-          console.log('⚠️  잔액 부족으로 인해 100KB 업로드 테스트를 스킵합니다.');
+          console.log('⚠️  Skipping 100KB upload test due to insufficient balance.');
           // 테스트를 성공으로 처리
           expect(true).toBe(true);
         } else {
@@ -129,29 +129,29 @@ describe('Irys MCP 성능 테스트', () => {
     }, 70000);
   });
 
-  describe('파일 다운로드 성능 테스트', () => {
+  describe('File Download Performance Tests', () => {
     let uploadedTransactionId: string;
 
     beforeAll(async () => {
-      // 다운로드 테스트용 파일 업로드
+      // Upload file for download test
       const filePath = join(__dirname, 'download-test-file.txt');
       const content = 'C'.repeat(5120); // 5KB
       writeFileSync(filePath, content, 'utf8');
       testFiles.push(filePath);
 
-                    const uploadResult = await mcpServer.irysService.uploadFile({
-                filePath,
-                isPublic: true,
-                tags: {
-                  'Content-Type': 'text/plain',
-                  'Test-Type': 'performance-download'
-                }
-              });
+      const uploadResult = await mcpServer.irysService.uploadFile({
+        filePath,
+        isPublic: true,
+        tags: {
+          'Content-Type': 'text/plain',
+          'Test-Type': 'performance-download'
+        }
+      });
 
       uploadedTransactionId = uploadResult.transactionId;
     }, 40000);
 
-    test('파일 다운로드 성능 측정', async () => {
+    test('File download performance measurement', async () => {
       const downloadPath = join(__dirname, 'downloaded-performance-test.txt');
       testFiles.push(downloadPath);
 
@@ -166,77 +166,77 @@ describe('Irys MCP 성능 테스트', () => {
       const downloadTime = endTime - startTime;
       
       expect(downloadResult).toHaveProperty('filePath');
-                    expect(downloadResult.filePath && existsSync(downloadResult.filePath)).toBe(true);
-      expect(downloadTime).toBeLessThan(30000); // 30초 이내 다운로드
+      expect(downloadResult.filePath && existsSync(downloadResult.filePath)).toBe(true);
+      expect(downloadTime).toBeLessThan(30000); // Download within 30 seconds
       
-      console.log(`📥 파일 다운로드 시간: ${downloadTime}ms`);
+      console.log(`📥 File download time: ${downloadTime}ms`);
     }, 40000);
   });
 
-  describe('검색 성능 테스트', () => {
-    test('파일 검색 응답 시간 측정', async () => {
+  describe('Search Performance Tests', () => {
+    test('File search response time measurement', async () => {
       const startTime = Date.now();
       
-                    const searchResult = await mcpServer.irysService.searchFiles({
-                query: 'Content-Type:text/plain',
-                limit: 10,
-                offset: 0
-              });
+      const searchResult = await mcpServer.irysService.searchFiles({
+        query: 'Content-Type:text/plain',
+        limit: 10,
+        offset: 0
+      });
       
       const endTime = Date.now();
       const searchTime = endTime - startTime;
       
       expect(searchResult).toHaveProperty('files');
       expect(searchResult).toHaveProperty('total');
-      expect(searchTime).toBeLessThan(15000); // 15초 이내 검색
+      expect(searchTime).toBeLessThan(15000); // Search within 15 seconds
       
-      console.log(`🔍 파일 검색 시간: ${searchTime}ms`);
+      console.log(`🔍 File search time: ${searchTime}ms`);
     }, 20000);
   });
 
-  describe('배치 업로드 성능 테스트', () => {
-    test('여러 파일 배치 업로드 성능', async () => {
+  describe('Batch Upload Performance Tests', () => {
+    test('Batch upload performance for multiple files', async () => {
       const batchFiles = [];
       
-      // 5개의 작은 파일 생성
+      // Create 5 small files
       for (let i = 0; i < 5; i++) {
         const filePath = join(__dirname, `batch-performance-${i}.txt`);
-        const content = `배치 성능 테스트 파일 ${i}\n`.repeat(100); // 약 2KB
+        const content = `Batch performance test file ${i}\n`.repeat(100); // Approx 2KB
         writeFileSync(filePath, content, 'utf8');
         testFiles.push(filePath);
         
-                        batchFiles.push({
-                  filePath,
-                  isPublic: true,
-                  tags: {
-                    'Content-Type': 'text/plain',
-                    'Batch-Index': i.toString(),
-                    'Test-Type': 'performance-batch'
-                  }
-                });
+        batchFiles.push({
+          filePath,
+          isPublic: true,
+          tags: {
+            'Content-Type': 'text/plain',
+            'Batch-Index': i.toString(),
+            'Test-Type': 'performance-batch'
+          }
+        });
       }
 
       const startTime = Date.now();
       
-                    const batchResult = await mcpServer.irysService.batchUpload({
-                files: batchFiles,
-                isPublic: true
-              });
+      const batchResult = await mcpServer.irysService.batchUpload({
+        files: batchFiles,
+        isPublic: true
+      });
       
       const endTime = Date.now();
       const batchTime = endTime - startTime;
       
-            expect(batchResult).toHaveProperty('results');
+      expect(batchResult).toHaveProperty('results');
       expect(batchResult).toHaveProperty('summary');
       expect(batchResult.summary.total).toBe(5);
-      expect(batchTime).toBeLessThan(120000); // 2분 이내 배치 업로드
+      expect(batchTime).toBeLessThan(120000); // Batch upload within 2 minutes
       
-      console.log(`📦 5개 파일 배치 업로드 시간: ${batchTime}ms`);
+      console.log(`📦 5-file batch upload time: ${batchTime}ms`);
     }, 130000);
   });
 
-  describe('동시 요청 성능 테스트', () => {
-    test('동시 연결 확인 요청 처리', async () => {
+  describe('Concurrent Request Performance Tests', () => {
+    test('Concurrent connection check requests', async () => {
       const concurrentRequests = 5;
       const promises = [];
       
@@ -254,23 +254,23 @@ describe('Irys MCP 성능 테스트', () => {
         expect(result).toBe(true);
       });
       
-      expect(totalTime).toBeLessThan(20000); // 20초 이내 모든 요청 완료
+      expect(totalTime).toBeLessThan(20000); // All requests completed within 20 seconds
       
-      console.log(`⚡ ${concurrentRequests}개 동시 연결 확인 시간: ${totalTime}ms`);
+      console.log(`⚡ ${concurrentRequests} concurrent connection check time: ${totalTime}ms`);
     }, 25000);
 
-    test('동시 검색 요청 처리', async () => {
+    test('Concurrent search requests', async () => {
       const concurrentRequests = 3;
       const promises = [];
       
       const startTime = Date.now();
       
       for (let i = 0; i < concurrentRequests; i++) {
-                        promises.push(mcpServer.irysService.searchFiles({
-                  query: `Test-Type:performance-${i % 2 === 0 ? 'small' : 'medium'}`,
-                  limit: 5,
-                  offset: 0
-                }));
+        promises.push(mcpServer.irysService.searchFiles({
+          query: `Test-Type:performance-${i % 2 === 0 ? 'small' : 'medium'}`,
+          limit: 5,
+          offset: 0
+        }));
       }
       
       const results = await Promise.all(promises);
@@ -282,14 +282,14 @@ describe('Irys MCP 성능 테스트', () => {
         expect(result).toHaveProperty('total');
       });
       
-      expect(totalTime).toBeLessThan(30000); // 30초 이내 모든 요청 완료
+      expect(totalTime).toBeLessThan(30000); // All requests completed within 30 seconds
       
-      console.log(`⚡ ${concurrentRequests}개 동시 검색 시간: ${totalTime}ms`);
+      console.log(`⚡ ${concurrentRequests} concurrent search time: ${totalTime}ms`);
     }, 35000);
   });
 
-  describe('메모리 사용량 테스트', () => {
-        test('대용량 파일 처리 시 메모리 사용량', async () => {
+  describe('Memory Usage Tests', () => {
+    test('Memory usage during large file processing', async () => {
       const filePath = join(__dirname, 'large-test-file.txt');
       const content = 'D'.repeat(1024000); // 1MB
       writeFileSync(filePath, content, 'utf8');
@@ -313,11 +313,11 @@ describe('Irys MCP 성능 테스트', () => {
         expect(uploadResult).toHaveProperty('transactionId');
         expect(uploadResult.size).toBe(1024000);
         
-        console.log(`🧠 메모리 사용량 증가: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
-        console.log(`📊 최종 메모리 사용량: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`🧠 Memory usage increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`📊 Final memory usage: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
       } catch (error: any) {
         if (error.message.includes('Not enough balance')) {
-          console.log('⚠️  잔액 부족으로 인해 대용량 파일 업로드 테스트를 스킵합니다.');
+          console.log('⚠️  Skipping large file upload test due to insufficient balance.');
           // 테스트를 성공으로 처리
           expect(true).toBe(true);
         } else {
@@ -327,8 +327,8 @@ describe('Irys MCP 성능 테스트', () => {
     }, 120000);
   });
 
-  describe('에러 처리 성능 테스트', () => {
-    test('잘못된 요청에 대한 빠른 에러 응답', async () => {
+  describe('Error Handling Performance Tests', () => {
+    test('Fast error response for invalid requests', async () => {
       const startTime = Date.now();
       
       try {
@@ -337,9 +337,9 @@ describe('Irys MCP 성능 테스트', () => {
         const endTime = Date.now();
         const errorResponseTime = endTime - startTime;
         
-        expect(errorResponseTime).toBeLessThan(5000); // 5초 이내 에러 응답
+        expect(errorResponseTime).toBeLessThan(5000); // Error response within 5 seconds
         
-        console.log(`❌ 에러 응답 시간: ${errorResponseTime}ms`);
+        console.log(`❌ Error response time: ${errorResponseTime}ms`);
       }
     }, 10000);
   });

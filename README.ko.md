@@ -1,5 +1,7 @@
 # Irys MCP Server
 
+[English](README.md) | 한국어
+
 Irys L1 메인넷 및 테스트넷과 연동하는 Model Context Protocol (MCP) 서버입니다.
 
 ## 🚀 빠른 시작

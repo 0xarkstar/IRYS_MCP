@@ -27,11 +27,11 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       try {
         const isConnected = await server.irysService.checkConnection();
         if (isConnected) {
-          console.log('✅ SDK 초기화 완료');
+          console.log('✅ SDK initialization completed');
           break;
         }
       } catch (error) {
-        console.log(`⚠️ SDK 초기화 시도 ${retries + 1}/${maxRetries}:`, error.message);
+        console.log(`⚠️ SDK initialization attempt ${retries + 1}/${maxRetries}:`, error.message);
       }
       retries++;
       if (retries < maxRetries) {
@@ -40,7 +40,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
     }
     
     if (retries >= maxRetries) {
-      console.warn('⚠️ SDK 초기화 실패, 테스트를 계속 진행합니다.');
+      console.warn('⚠️ SDK initialization failed, continuing test.');
     }
     
     // 테스트 디렉토리 생성
@@ -135,7 +135,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       });
       
       expect(result.permanent).toBe(true);
-      expect(result.message).toContain('영구적으로');
+      expect(result.message).toContain('permanently');
     });
   });
 
@@ -270,7 +270,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       });
       
       expect(result.success).toBe(true);
-      expect(result.message).toContain('카테고리 \'test-category\'이(가) 생성되었습니다.');
+      expect(result.message).toContain('Category \'test-category\' created.');
     });
   });
 
@@ -301,7 +301,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       });
       
       expect(result.success).toBe(true);
-      expect(result.message).toContain('태그 create 작업이 완료');
+              expect(result.message).toContain('Tag create operation completed');
     });
   });
 
@@ -354,7 +354,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       });
       
       expect(result.success).toBe(true);
-      expect(result.message).toContain('플러그인 install 작업이 완료');
+              expect(result.message).toContain('Plugin install operation completed');
     });
   });
 
@@ -401,7 +401,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('timestamp');
       expect(result.restored).toBe(true);
-      expect(result.message).toContain('성공적으로 복구');
+              expect(result.message).toContain('File restored successfully');
     });
   });
 
@@ -417,7 +417,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
         // 에러가 발생하지 않으면 테스트 실패
         expect(true).toBe(false); // 에러가 발생해야 합니다.
       } catch (error: any) {
-        expect(error.message).toContain('실패');
+        expect(error.message).toContain('failed');
       }
     });
 
@@ -431,7 +431,7 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
         });
         expect(true).toBe(false); // 에러가 발생해야 합니다.
       } catch (error: any) {
-        expect(error.message).toContain('디렉토리를 찾을 수 없습니다');
+        expect(error.message).toContain('Directory not found');
       }
     });
   });

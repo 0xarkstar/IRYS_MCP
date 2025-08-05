@@ -14,7 +14,7 @@ describe('Irys MCP 통합 테스트', () => {
   beforeAll(async () => {
     const privateKey = process.env.IRYS_PRIVATE_KEY;
     if (!privateKey) {
-      throw new Error('IRYS_PRIVATE_KEY 환경변수가 설정되지 않았습니다.');
+      throw new Error('IRYS_PRIVATE_KEY environment variable is not set.');
     }
 
     server = new IrysMCPServer(privateKey);
@@ -26,18 +26,18 @@ describe('Irys MCP 통합 테스트', () => {
       try {
         const isConnected = await server.irysService.checkConnection();
         if (isConnected) {
-          console.log('✅ Irys SDK 초기화 완료');
+          console.log('✅ Irys SDK initialization completed');
           break;
         }
       } catch (error) {
-        console.log(`⏳ SDK 초기화 대기 중... (${retries + 1}/${maxRetries})`);
+        console.log(`⏳ Waiting for SDK initialization... (${retries + 1}/${maxRetries})`);
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
       retries++;
     }
 
     if (retries >= maxRetries) {
-      console.warn('⚠️ SDK 초기화 시간 초과, 테스트를 계속 진행합니다.');
+      console.warn('⚠️ SDK initialization timed out, continuing with test.');
     }
 
     testFilePath = join(__dirname, 'test-file.txt');
@@ -51,12 +51,12 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('연결 테스트', () => {
-    test('Irys 네트워크 연결 확인', async () => {
+    test('Irys network connection check', async () => {
       const isConnected = await server.irysService.checkConnection();
       expect(isConnected).toBe(true);
     }, 15000);
 
-    test('잔액 조회', async () => {
+    test('Balance check', async () => {
       const balance = await server.irysService.getBalance();
       expect(typeof balance).toBe('string');
       expect(parseFloat(balance)).toBeGreaterThanOrEqual(0);
@@ -64,11 +64,11 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('파일 업로드 테스트', () => {
-    test('텍스트 파일 업로드', async () => {
+    test('Text file upload', async () => {
       // 테스트 파일 생성
-      const testContent = `안녕하세요! 이것은 Irys MCP 테스트 파일입니다.
-생성 시간: ${new Date().toISOString()}
-테스트 ID: ${Math.random().toString(36).substring(7)}`;
+      const testContent = `Hello! This is an Irys MCP test file.
+Creation time: ${new Date().toISOString()}
+Test ID: ${Math.random().toString(36).substring(7)}`;
 
       writeFileSync(testFilePath, testContent, 'utf8');
 
@@ -93,7 +93,7 @@ describe('Irys MCP 통합 테스트', () => {
       uploadedTransactionId = uploadResult.transactionId;
     }, 30000);
 
-    test('이미지 파일 업로드 (시뮬레이션)', async () => {
+    test('Image file upload (simulation)', async () => {
       // 실제 이미지 파일 대신 텍스트 파일을 이미지로 시뮬레이션
       const imageTestPath = join(__dirname, 'test-image.txt');
       writeFileSync(imageTestPath, 'fake-image-data', 'utf8');
@@ -114,7 +114,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('파일 정보 조회 테스트', () => {
-    test('업로드된 파일 정보 조회', async () => {
+    test('Uploaded file info check', async () => {
       expect(uploadedTransactionId).toBeDefined();
 
       const fileInfo = await server.irysService.getFileInfo(uploadedTransactionId);
@@ -130,7 +130,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('파일 다운로드 테스트', () => {
-    test('업로드된 파일 다운로드', async () => {
+    test('Downloaded file check', async () => {
       const downloadPath = join(__dirname, 'downloaded-test-file.txt');
 
       const downloadResult = await server.irysService.downloadFile({
@@ -148,7 +148,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('파일 검색 테스트', () => {
-    test('태그 기반 파일 검색', async () => {
+    test('Tag-based file search', async () => {
       // searchFiles 호출
       const searchResult = await server.irysService.searchFiles({
         query: 'Test-Type:integration-test',
@@ -162,7 +162,7 @@ describe('Irys MCP 통합 테스트', () => {
       expect(searchResult.total).toBeGreaterThanOrEqual(0);
     }, 15000);
 
-    test('콘텐츠 타입 기반 검색', async () => {
+    test('Content type-based search', async () => {
       // searchFiles 호출
       const searchResult2 = await server.irysService.searchFiles({
         query: 'Content-Type:text/plain',
@@ -176,7 +176,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('배치 업로드 테스트', () => {
-    test('여러 파일 배치 업로드', async () => {
+    test('Batch file upload', async () => {
       // 배치 업로드
       const batchFiles: Array<{
         filePath: string;
@@ -185,7 +185,7 @@ describe('Irys MCP 통합 테스트', () => {
       }> = [];
       for (let i = 0; i < 3; i++) {
         const filePath = join(__dirname, `batch-test-${i}.txt`);
-        const content = `배치 테스트 파일 ${i}\n생성 시간: ${new Date().toISOString()}`;
+        const content = `Batch test file ${i}\nCreation time: ${new Date().toISOString()}`;
         writeFileSync(filePath, content, 'utf8');
         batchFiles.push({
           filePath,
@@ -213,13 +213,13 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('버전 관리 테스트', () => {
-    test('파일 버전 생성', async () => {
+    test('File version creation', async () => {
       // 버전 생성
       const versionResult = await server.irysService.createVersion({
         originalTransactionId: uploadedTransactionId,
         filePath: testFilePath,
         version: 'v1.1',
-        description: '테스트 버전 생성'
+        description: 'Test version creation'
       });
 
       // 버전 생성 결과 검증 (필드명을 실제 응답에 맞게 수정)
@@ -231,7 +231,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('공유 설정 테스트', () => {
-    test('파일 공유 설정 업데이트', async () => {
+    test('File share settings update', async () => {
       // 공유 설정
       const shareResult = await server.irysService.updateShareSettings({
         transactionId: uploadedTransactionId,
@@ -248,7 +248,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('통계 정보 테스트', () => {
-    test('사용자 통계 조회', async () => {
+    test('User statistics check', async () => {
       // 통계 조회
       const statsResult = await server.irysService.getStats({});
 
@@ -264,7 +264,7 @@ describe('Irys MCP 통합 테스트', () => {
   });
 
   describe('MCP 도구 테스트', () => {
-    test('등록된 도구 목록 확인', () => {
+    test('Registered tools check', () => {
       const tools = server.getRegisteredTools();
       expect(Array.isArray(tools)).toBe(true);
       expect(tools.length).toBeGreaterThan(0);
@@ -282,7 +282,7 @@ describe('Irys MCP 통합 테스트', () => {
       expect(toolNames).toContain('irys_get_balance');
     });
 
-    test('도구 스키마 검증', () => {
+    test('Tool schema validation', () => {
       const tools = server.getRegisteredTools();
       
       tools.forEach(tool => {
@@ -298,8 +298,8 @@ describe('Irys MCP 통합 테스트', () => {
     });
   });
 
-  describe('에러 처리 테스트', () => {
-    test('존재하지 않는 파일 업로드 시 에러 처리', async () => {
+  describe('Error handling test', () => {
+    test('Error handling for non-existent file upload', async () => {
       // 에러 테스트
       await expect(
         server.irysService.uploadFile({
@@ -310,13 +310,13 @@ describe('Irys MCP 통합 테스트', () => {
       ).rejects.toThrow();
     });
 
-    test('존재하지 않는 트랜잭션 ID로 파일 정보 조회 시 에러 처리', async () => {
+    test('Error handling for non-existent transaction ID file info lookup', async () => {
       await expect(
         server.irysService.getFileInfo('invalid-transaction-id')
       ).rejects.toThrow();
     });
 
-    test('잘못된 트랜잭션 ID로 다운로드 시 에러 처리', async () => {
+    test('Error handling for invalid transaction ID download', async () => {
       await expect(
         server.irysService.downloadFile({
           transactionId: 'invalid-transaction-id',
@@ -326,13 +326,13 @@ describe('Irys MCP 통합 테스트', () => {
     });
   });
 
-  describe('암호화 기능 테스트', () => {
-    test('암호화된 파일 업로드 (기본 기능 확인)', async () => {
+  describe('Encryption functionality test', () => {
+    test('Encrypted file upload (basic functionality check)', async () => {
       // 암호화 테스트 파일 생성
       const encryptedTestPath = join(__dirname, 'encrypted-test.txt');
-      const secretContent = `이것은 암호화된 비밀 파일입니다.
-생성 시간: ${new Date().toISOString()}
-비밀 키: ${Math.random().toString(36).substring(7)}`;
+      const secretContent = `This is an encrypted secret file.
+Creation time: ${new Date().toISOString()}
+Secret key: ${Math.random().toString(36).substring(7)}`;
       writeFileSync(encryptedTestPath, secretContent, 'utf8');
 
       const password = 'my-secret-password-123';
@@ -357,7 +357,7 @@ describe('Irys MCP 통합 테스트', () => {
       unlinkSync(encryptedTestPath);
     }, 30000);
 
-    test('잘못된 비밀번호로 암호화된 파일 다운로드 시 에러 처리', async () => {
+    test('Error handling for incorrect password during encrypted file download', async () => {
       // 먼저 암호화된 파일 업로드
       const encryptedTestPath = join(__dirname, 'wrong-password-test.txt');
       writeFileSync(encryptedTestPath, 'test content', 'utf8');
@@ -383,11 +383,11 @@ describe('Irys MCP 통합 테스트', () => {
     }, 30000);
   });
 
-  describe('데이터 계약 기능 테스트', () => {
-    test('데이터 계약 파일 업로드 (기본 기능 확인)', async () => {
+  describe('Data contract functionality test', () => {
+    test('Data contract file upload (basic functionality check)', async () => {
       const contractTestPath = join(__dirname, 'contract-test.txt');
-      const contractContent = `이것은 데이터 계약이 적용된 파일입니다.
-생성 시간: ${new Date().toISOString()}`;
+      const contractContent = `This is a file with a data contract applied.
+Creation time: ${new Date().toISOString()}`;
       writeFileSync(contractTestPath, contractContent, 'utf8');
 
       // 데이터 계약과 함께 파일 업로드
@@ -409,9 +409,9 @@ describe('Irys MCP 통합 테스트', () => {
       unlinkSync(contractTestPath);
     }, 30000);
 
-    test('조건부 접근 파일 다운로드', async () => {
+    test('Conditional access file download', async () => {
       const conditionalPath = join(__dirname, 'conditional-test.txt');
-      writeFileSync(conditionalPath, '조건부 접근 파일', 'utf8');
+      writeFileSync(conditionalPath, 'Conditional access file', 'utf8');
 
       const uploadResult = await server.irysService.uploadWithDataContract({
         filePath: conditionalPath,
@@ -438,8 +438,8 @@ describe('Irys MCP 통합 테스트', () => {
     }, 30000);
   });
 
-  describe('고급 검색 기능 테스트', () => {
-    test('실제 GraphQL 검색 테스트', async () => {
+  describe('Advanced search functionality test', () => {
+    test('Real GraphQL search test', async () => {
       // 실제 Arweave GraphQL을 사용한 검색
       const searchResult = await server.irysService.searchFiles({
         query: 'App-Name',
@@ -453,7 +453,7 @@ describe('Irys MCP 통합 테스트', () => {
       expect(searchResult.total).toBeGreaterThanOrEqual(0);
     }, 15000);
 
-    test('소유자 기반 검색', async () => {
+    test('Owner-based search', async () => {
       // 특정 소유자의 파일 검색 (시뮬레이션 모드에서도 동작)
       const ownerSearchResult = await server.irysService.searchFiles({
         owner: 'test-owner-address',

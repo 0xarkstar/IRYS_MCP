@@ -1,4 +1,5 @@
-import Irys from '@irys/sdk';
+// Dynamic import for @irys/sdk to handle ES module compatibility
+let Irys: any;
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, extname, basename } from 'path';
 import * as mime from 'mime-types';
@@ -64,7 +65,7 @@ export interface CSVDownloadRequest {
 }
 
 export class IrysAdvancedService {
-  private irys: Irys | null = null;
+  private irys: any | null = null;
   private gatewayUrl: string;
   private privateKey: string;
   private tokenType: TokenType;
@@ -78,20 +79,29 @@ export class IrysAdvancedService {
     this.tokenType = tokenType;
     this.gatewayUrl = gatewayUrl;
     
-    try {
-      this.initializeServices();
-    } catch (error: any) {
-      console.warn('Irys 고급 서비스 초기화 실패 (시뮬레이션 모드로 전환):', error);
-    }
+    // Initialize services asynchronously
+    this.initializeServices().catch(error => {
+      console.warn('Irys advanced service initialization failed (switching to simulation mode):', error);
+    });
   }
 
-  private initializeServices(): void {
-    // 기본 Irys SDK만 초기화
-    this.irys = new Irys({
-      url: this.gatewayUrl,
-      token: this.tokenType,
-      key: this.privateKey,
-    });
+  private async initializeServices(): Promise<void> {
+    try {
+      // Dynamic import of @irys/sdk
+      if (!Irys) {
+        const irysModule = await import('@irys/sdk');
+        Irys = irysModule.default;
+      }
+      
+      // Initialize basic Irys SDK
+      this.irys = new Irys({
+        url: this.gatewayUrl,
+        token: this.tokenType,
+        key: this.privateKey,
+      });
+    } catch (error: any) {
+      console.warn('Irys advanced service initialization failed (switching to simulation mode):', error);
+    }
   }
 
   // 🚀 고급 번들링 기능 (시뮬레이션)

@@ -26,15 +26,19 @@ const getDefaultUrl = (network: NetworkType): string => {
 
 const finalGatewayUrl = gatewayUrl || getDefaultUrl(networkType);
 
-console.log('🚀 Irys MCP 서버 시작 중...');
-console.log('IRYS_PRIVATE_KEY=' + (privateKey ? '설정됨' : '설정되지 않음'));
-console.log(`IRYS_NETWORK=${networkType}`);
-console.log(`IRYS_GATEWAY_URL=${finalGatewayUrl} (Irys L1 ${networkType === 'testnet' ? '테스트넷' : '메인넷'})`);
+console.log('🚀 Starting Irys MCP Server...');
+console.log('IRYS_PRIVATE_KEY=' + (privateKey ? 'Set' : 'Not set'));
+console.log(`🌍 Network Type: ${networkType}`);
+console.log(`🌐 Gateway URL: ${finalGatewayUrl}`);
 
-// MCP 서버 인스턴스 생성
+// Create MCP server instances
 const server = new IrysMCPServer(privateKey, finalGatewayUrl);
 const advancedServer = new IrysAdvancedMCPServer(privateKey, 'ethereum', finalGatewayUrl);
 
-// 서버 시작
+// Start servers
 server.start();
 advancedServer.start();
+
+console.log('✅ Irys MCP Server started successfully');
+console.log('🚀 Starting Irys Advanced MCP Server...');
+console.log('✅ Irys Advanced MCP Server started successfully');

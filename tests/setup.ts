@@ -1,31 +1,31 @@
 import dotenv from 'dotenv';
 import { randomBytes } from 'crypto';
 
-// 환경 변수 로드
+// Load environment variables
 dotenv.config();
 
-// 테스트용 개인키 생성 함수
+// Test private key generation function
 function generateTestPrivateKey(): string {
   return randomBytes(32).toString('hex');
 }
 
-// 환경 변수가 설정되지 않은 경우 테스트용 값으로 설정
+// Set test values if environment variables are not configured
 if (!process.env.IRYS_PRIVATE_KEY) {
   process.env.IRYS_PRIVATE_KEY = generateTestPrivateKey();
-  console.log('🔑 테스트용 개인키 생성됨:', process.env.IRYS_PRIVATE_KEY);
+  console.log('🔑 Test private key generated:', process.env.IRYS_PRIVATE_KEY);
 }
 
 if (!process.env.IRYS_NETWORK) {
   process.env.IRYS_NETWORK = 'mainnet';
-  console.log('🌍 IRYS_NETWORK 설정됨: mainnet');
+  console.log('🌍 IRYS_NETWORK set to: mainnet');
 }
 
 if (!process.env.IRYS_GATEWAY_URL) {
   process.env.IRYS_GATEWAY_URL = 'https://uploader.irys.xyz';
-  console.log('🌐 IRYS_GATEWAY_URL 설정됨: https://uploader.irys.xyz');
+  console.log('🌐 IRYS_GATEWAY_URL set to: https://uploader.irys.xyz');
 }
 
-// Jest 설정
+// Jest configuration
 export default {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
@@ -43,36 +43,36 @@ export default {
   restoreMocks: true,
 };
 
-// 전역 테스트 설정
+// Global test setup
 beforeAll(() => {
-  console.log('🧪 테스트 환경 설정 완료');
-  console.log(`🔑 개인키: ${process.env.IRYS_PRIVATE_KEY ? '설정됨' : '설정되지 않음'}`);
-  console.log(`🌍 네트워크: ${process.env.IRYS_NETWORK}`);
+  console.log('🧪 Test environment setup completed');
+  console.log(`🔑 Private key: ${process.env.IRYS_PRIVATE_KEY ? 'Set' : 'Not set'}`);
+  console.log(`🌍 Network: ${process.env.IRYS_NETWORK}`);
   console.log(`🌐 Gateway URL: ${process.env.IRYS_GATEWAY_URL}`);
 });
 
 afterAll(() => {
-  console.log('🧹 테스트 환경 정리 완료');
+  console.log('🧹 Test environment cleanup completed');
 });
 
-// 각 테스트 후 정리
+// Cleanup after each test
 afterEach(() => {
-  // 테스트 간 격리를 위한 정리 작업
+  // Cleanup work for test isolation
   jest.clearAllMocks();
 });
 
-// 테스트 환경 변수 검증
+// Test environment variable validation
 beforeAll(() => {
   const requiredEnvVars = ['IRYS_PRIVATE_KEY'];
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
-    console.warn(`⚠️  다음 환경변수가 설정되지 않았습니다: ${missingVars.join(', ')}`);
-    console.warn('   일부 테스트가 실패할 수 있습니다.');
+    console.warn(`⚠️  The following environment variables are not set: ${missingVars.join(', ')}`);
+    console.warn('   Some tests may fail.');
   }
 });
 
-// 테스트 파일 정리 함수
+// Test file cleanup function
 export const cleanupTestFiles = (filePaths: string[]) => {
   const fs = require('fs');
   filePaths.forEach(filePath => {
@@ -81,19 +81,19 @@ export const cleanupTestFiles = (filePaths: string[]) => {
         fs.unlinkSync(filePath);
       }
     } catch (error) {
-      // 파일 삭제 실패는 무시
+      // Ignore file deletion failures
     }
   });
 };
 
-// 테스트 데이터 생성 함수
+// Test data creation function
 export const createTestFile = (filePath: string, content: string = 'test content') => {
   const fs = require('fs');
   fs.writeFileSync(filePath, content, 'utf8');
   return filePath;
 };
 
-// 랜덤 테스트 ID 생성
+// Random test ID generation
 export const generateTestId = () => {
   return `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 }; 
