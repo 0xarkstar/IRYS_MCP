@@ -1,5 +1,5 @@
-// Dynamic import for @irys/sdk to handle ES module compatibility
-let Irys: any;
+// Synchronous import for @irys/sdk to handle Jest compatibility
+const Irys = require('@irys/sdk');
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import * as mime from 'mime-types';
@@ -25,6 +25,8 @@ export class IrysTestnetService {
   private gatewayUrl: string;
   private privateKey: string;
   private networkType: NetworkType;
+  private isInitializing = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(
     privateKey: string,
@@ -36,10 +38,43 @@ export class IrysTestnetService {
     // Testnet URL setting
     this.gatewayUrl = gatewayUrl || 'https://testnet-rpc.irys.xyz/v1';
     
-    // Irys SDK initialization attempt (handled asynchronously)
+    // Start SDK initialization (but don't wait for it in constructor)
     this.initializeIrysSDK().catch(error => {
       console.error('❌ Testnet SDK initialization failed:', error);
     });
+  }
+
+  /**
+   * Ensure SDK is initialized before use
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.irys) {
+      return; // Already initialized
+    }
+    
+    if (this.isInitializing) {
+      // Wait for ongoing initialization
+      await this.initializationPromise;
+      return;
+    }
+    
+    // Start new initialization
+    this.isInitializing = true;
+    this.initializationPromise = this.initializeIrysSDK();
+    await this.initializationPromise;
+    this.isInitializing = false;
+  }
+
+  /**
+   * Check if SDK is ready for use
+   */
+  public async isReady(): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      return this.irys !== undefined;
+    } catch (error) {
+      return false;
+    }
   }
 
   private async initializeIrysSDK(): Promise<void> {
@@ -49,11 +84,7 @@ export class IrysTestnetService {
       console.log(`🌍 Network: ${this.networkType}`);
       console.log(`🌐 Gateway URL: ${this.gatewayUrl}`);
 
-      // Dynamic import of @irys/sdk
-      if (!Irys) {
-        const irysModule = await import('@irys/sdk');
-        Irys = irysModule.default;
-      }
+      // Irys SDK is already imported synchronously
 
       // Validate key format
       if (this.privateKey.length !== 64) {
@@ -65,17 +96,14 @@ export class IrysTestnetService {
       }
 
       try {
-        // Convert hex string to Uint8Array
-        const keyBytes = new Uint8Array(Buffer.from(this.privateKey, 'hex'));
-        
         // Use mainnet URL for SDK initialization (workaround for testnet compatibility)
         const mainnetUrl = 'https://uploader.irys.xyz';
         
-        // Initialize Irys SDK with mainnet URL for compatibility
+        // Initialize Irys SDK with string key (SDK will handle conversion internally)
         this.irys = new Irys({
           url: mainnetUrl,
           token: 'ethereum',
-          key: keyBytes,
+          key: this.privateKey,
         });
 
         console.log('✅ Irys L1 Testnet SDK initialization successful (using mainnet URL)');
@@ -130,6 +158,9 @@ export class IrysTestnetService {
   }
 
   async uploadFile(request: UploadRequest): Promise<UploadResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     try {
       if (!this.irys) {
         throw new NetworkError('Irys SDK is not initialized.');

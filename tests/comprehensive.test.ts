@@ -20,27 +20,30 @@ describe('공용 오픈소스 MCP 종합 테스트', () => {
   beforeAll(async () => {
     server = new IrysMCPServer(privateKey);
     
-    // SDK 초기화 대기
-    let retries = 0;
-    const maxRetries = 10;
-    while (retries < maxRetries) {
+    // Wait for SDK initialization using the new isReady() method
+    let attempts = 0;
+    const maxAttempts = 20;
+    const retryDelay = 2000; // 2 seconds
+    
+    console.log('⏳ Waiting for Irys SDK initialization...');
+    
+    while (attempts < maxAttempts) {
       try {
-        const isConnected = await server.irysService.checkConnection();
-        if (isConnected) {
-          console.log('✅ SDK initialization completed');
+        const isReady = await server.irysService.isReady();
+        if (isReady) {
+          console.log('✅ Irys SDK initialization completed successfully');
           break;
         }
       } catch (error) {
-        console.log(`⚠️ SDK initialization attempt ${retries + 1}/${maxRetries}:`, error.message);
+        console.log(`⏳ Attempt ${attempts + 1}/${maxAttempts}: SDK not ready yet...`);
       }
-      retries++;
-      if (retries < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      attempts++;
     }
     
-    if (retries >= maxRetries) {
-      console.warn('⚠️ SDK initialization failed, continuing test.');
+    if (attempts >= maxAttempts) {
+      console.warn('⚠️ SDK initialization timed out, continuing with tests (some may fail)');
     }
     
     // 테스트 디렉토리 생성

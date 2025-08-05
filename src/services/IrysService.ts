@@ -1,5 +1,5 @@
-// Dynamic import for @irys/sdk to handle ES module compatibility
-let Irys: any;
+// Synchronous import for @irys/sdk to handle Jest compatibility
+const Irys = require('@irys/sdk');
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as mime from 'mime-types';
@@ -25,6 +25,8 @@ export class IrysService {
   private gatewayUrl: string;
   private privateKey: string;
   private networkType: NetworkType;
+  private isInitializing = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(
     privateKey: string,
@@ -51,7 +53,7 @@ export class IrysService {
       this.gatewayUrl = this.getDefaultUrlForNetwork(this.networkType);
     }
     
-    // Irys SDK initialization attempt (handled asynchronously)
+    // Start SDK initialization (but don't wait for it in constructor)
     this.initializeIrysSDK().catch(error => {
       console.error('❌ SDK initialization failed:', error);
     });
@@ -102,11 +104,7 @@ export class IrysService {
       console.log(`🌍 Network: ${this.networkType}`);
       console.log(`🌐 Gateway URL: ${this.gatewayUrl}`);
 
-      // Dynamic import of @irys/sdk
-      if (!Irys) {
-        const irysModule = await import('@irys/sdk');
-        Irys = irysModule.default;
-      }
+      // Irys SDK is already imported synchronously
 
       // Handle 0x prefix for 66-character keys
       let processedKey = this.privateKey;
@@ -125,14 +123,11 @@ export class IrysService {
       }
 
       try {
-        // Convert hex string to Uint8Array
-        const keyBytes = new Uint8Array(Buffer.from(processedKey, 'hex'));
-        
-        // Initialize Irys SDK
+        // Initialize Irys SDK with string key (SDK will handle conversion internally)
         this.irys = new Irys({
           url: this.gatewayUrl,
           token: 'ethereum',
-          key: keyBytes,
+          key: processedKey,
         });
 
         console.log('✅ Irys L1 Mainnet SDK initialization successful');
@@ -155,6 +150,39 @@ export class IrysService {
       console.error('📋 Error details:', error);
       console.log('📝 Switching to simulation mode. Actual uploads/downloads may not work.');
       this.irys = undefined;
+    }
+  }
+
+  /**
+   * Ensure SDK is initialized before use
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.irys) {
+      return; // Already initialized
+    }
+    
+    if (this.isInitializing) {
+      // Wait for ongoing initialization
+      await this.initializationPromise;
+      return;
+    }
+    
+    // Start new initialization
+    this.isInitializing = true;
+    this.initializationPromise = this.initializeIrysSDK();
+    await this.initializationPromise;
+    this.isInitializing = false;
+  }
+
+  /**
+   * Check if SDK is ready for use
+   */
+  public async isReady(): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      return this.irys !== undefined;
+    } catch (error) {
+      return false;
     }
   }
 
@@ -188,6 +216,9 @@ export class IrysService {
 
   // Upload encrypted file
   async uploadEncryptedFile(request: UploadRequest & { password: string }): Promise<UploadResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     const { filePath, tags, contentType, description, category, isPublic, password } = request;
     if (!existsSync(filePath)) {
       throw new FileNotFoundError(`File not found: ${filePath}`);
@@ -308,6 +339,9 @@ export class IrysService {
    * 단일 파일 업로드
    */
   async uploadFile(request: UploadRequest): Promise<UploadResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     try {
       // 파일 존재 확인
       if (!existsSync(request.filePath)) {
@@ -405,6 +439,9 @@ export class IrysService {
    * 파일 검색 (실제 GraphQL 쿼리)
    */
   async searchFiles(request: SearchRequest): Promise<SearchResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     try {
       if (!this.irys) {
         throw new NetworkError('Irys SDK not initialized.');
@@ -717,6 +754,9 @@ export class IrysService {
    * 통계 정보 조회 (시뮬레이션)
    */
   async getStats(request: StatsRequest): Promise<StatsResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     try {
       if (!this.irys) {
         throw new NetworkError('Irys SDK not initialized.');
@@ -878,6 +918,9 @@ export class IrysService {
    * 잔액 조회
    */
   async getBalance(): Promise<string> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     try {
       if (!this.irys) {
         throw new NetworkError('Irys SDK not initialized.');
@@ -900,6 +943,9 @@ export class IrysService {
       accessControl?: 'public' | 'private' | 'time-based' | 'balance-based';
     };
   }): Promise<UploadResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     const { filePath, tags, contentType, description, category, isPublic, dataContract } = request;
     if (!existsSync(filePath)) {
       throw new FileNotFoundError(`File not found: ${filePath}`);
@@ -1091,6 +1137,9 @@ export class IrysService {
 
   // 파일 삭제 (실제로는 태그를 통한 삭제 표시)
   async deleteFile(request: DeleteRequest): Promise<DeleteResponse> {
+    // Ensure SDK is initialized
+    await this.ensureInitialized();
+    
     const { transactionId, permanent } = request;
     
     try {

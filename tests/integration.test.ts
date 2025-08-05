@@ -19,25 +19,30 @@ describe('Irys MCP 통합 테스트', () => {
 
     server = new IrysMCPServer(privateKey);
     
-    // SDK 초기화 대기
-    let retries = 0;
-    const maxRetries = 10;
-    while (retries < maxRetries) {
+    // Wait for SDK initialization using the new isReady() method
+    let attempts = 0;
+    const maxAttempts = 20;
+    const retryDelay = 2000; // 2 seconds
+    
+    console.log('⏳ Waiting for Irys SDK initialization...');
+    
+    while (attempts < maxAttempts) {
       try {
-        const isConnected = await server.irysService.checkConnection();
-        if (isConnected) {
-          console.log('✅ Irys SDK initialization completed');
+        const isReady = await server.irysService.isReady();
+        if (isReady) {
+          console.log('✅ Irys SDK initialization completed successfully');
           break;
         }
       } catch (error) {
-        console.log(`⏳ Waiting for SDK initialization... (${retries + 1}/${maxRetries})`);
+        console.log(`⏳ Attempt ${attempts + 1}/${maxAttempts}: SDK not ready yet...`);
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      retries++;
+      
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      attempts++;
     }
 
-    if (retries >= maxRetries) {
-      console.warn('⚠️ SDK initialization timed out, continuing with test.');
+    if (attempts >= maxAttempts) {
+      console.warn('⚠️ SDK initialization timed out, continuing with tests (some may fail)');
     }
 
     testFilePath = join(__dirname, 'test-file.txt');
