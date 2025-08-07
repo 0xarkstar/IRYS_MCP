@@ -7,6 +7,7 @@
  * It orchestrates the initialization and startup of all components.
  */
 
+import 'dotenv/config';
 import configManager from './config/index.js';
 import logger from './utils/logger.js';
 import MCPServer from './server/mcpServer.js';
@@ -170,16 +171,27 @@ class IrysMCPServerApp {
  * Main execution function
  */
 async function main() {
-  const app = new IrysMCPServerApp();
-  await app.run();
+  try {
+    console.log('Starting IRYS MCP Server...');
+    console.log('Environment variables:');
+    console.log('IRYS_PRIVATE_KEY:', process.env.IRYS_PRIVATE_KEY ? 'Set' : 'Not set');
+    console.log('IRYS_NETWORK:', process.env.IRYS_NETWORK);
+    console.log('PORT:', process.env.PORT);
+    
+    const app = new IrysMCPServerApp();
+    await app.run();
+  } catch (error) {
+    console.error('Fatal error in main:', error);
+    console.error('Stack trace:', error.stack);
+    process.exit(1);
+  }
 }
 
-// Run the application if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
+// Run the application
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  console.error('Stack trace:', error.stack);
+  process.exit(1);
+});
 
 export default IrysMCPServerApp; 

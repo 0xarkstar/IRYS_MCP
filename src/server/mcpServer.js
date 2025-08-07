@@ -286,10 +286,13 @@ class MCPServer {
       // Log server startup information
       logger.logServerStart(this.config);
 
-      // Start the server
-      await this.server.listen({
-        port: this.config.server.port,
-        host: this.config.server.host
+      // Start the server with correct FastMCP parameters
+      await this.server.start({
+        transportType: "httpStream",
+        httpStream: {
+          port: this.config.server.port,
+          endpoint: "/mcp"
+        }
       });
 
       logger.info('🧪 Ready for IRYS operations!');
